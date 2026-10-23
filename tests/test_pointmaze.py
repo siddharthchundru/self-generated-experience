@@ -2,7 +2,9 @@
 
 Run with:  python -m unittest discover -s tests
 
-These tests need MuJoCo and Gymnasium-Robotics. They replace an earlier set that
+These tests need MuJoCo and Gymnasium-Robotics. They rely on a few library
+internals (`point_env`, `position_noise_range`, wall geoms named "block..."),
+which is safe while the versions in requirements.txt are pinned. They replace an earlier set that
 mostly checked the library against itself. Each test here compares the
 simulator with an independent source: the grid in `mazes.py`, a number worked
 out by hand, or a controlled push of the ball.
@@ -11,11 +13,13 @@ What they establish:
 1. The walls MuJoCo builds are exactly the wall cells of the grid (M1 and M2).
 2. Cell/coordinate conversion matches hand-computed anchors, off-centre points
    and cell edges, and rejects points outside the maze.
-3. The task settings are what the spec says: 10 Hz control, ±0.25 start and goal
-   noise, success ends the episode with reward 1.
+3. The task settings are what the spec says: 10 Hz control with exactly the
+   library's dynamics (including its speed cap), ±0.25 start and goal noise,
+   success ends the episode with reward 1.
 4. Pushing the ball into a known wall leaves it in its cell.
-5. A reset must name its cells, so no goal can be drawn from the held-out region
-   by accident.
+5. A reset must name a free start cell and an allowed goal cell. On M1 goals
+   are limited to the demo region unless the held-out region is chosen
+   explicitly (as the S_out evaluation will).
 6. The same seed and the same actions give the same trajectory.
 """
 
@@ -28,7 +32,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from envs.mazes import M1, M2  # noqa: E402
+from envs.mazes import M1, M1_HELD_OUT_REGION, M2  # noqa: E402
 from envs.pointmaze import (  # noqa: E402
     FRAME_SKIP, POSITION_NOISE, cell_to_xy, make_env, xy_to_cell,
 )
@@ -98,19 +102,31 @@ class TestTaskSettings(unittest.TestCase):
     def test_control_rate_is_10_hz(self):
         self.assertAlmostEqual(self.env.unwrapped.point_env.dt, 0.1)
 
-    def test_one_step_equals_ten_physics_substeps(self):
-        # Reference: the library's own environment at 100 Hz, with no noise.
-        ref = gym.make("PointMaze_UMaze-v3", maze_map=M1)
+    def test_one_step_equals_ten_library_steps(self):
+        # Reference: the library's own environment at 100 Hz, with no noise. Full
+        # force for 1 s, so the ball reaches the speed cap and the cap is exercised.
+        ref = gym.make("PointMaze_UMaze-v3", maze_map=M1, continuing_task=False)
         ref.unwrapped.position_noise_range = 0.0
         self.env.unwrapped.position_noise_range = 0.0
-        ref.reset(seed=0, options=M1_OPTS)
-        self.env.reset(seed=0, options=M1_OPTS)
-        action = np.array([0.3, 1.0], dtype=np.float32)
-        for _ in range(FRAME_SKIP):
-            ref_obs, *_ = ref.step(action)
-        obs, *_ = self.env.step(action)
+        options = {"reset_cell": [7, 1], "goal_cell": [1, 7]}
+        ref.reset(seed=0, options=options)
+        self.env.reset(seed=0, options=options)
+        action = np.array([1.0, 0.0], dtype=np.float32)  # east along the south arm
+        for _ in range(10):
+            for _ in range(FRAME_SKIP):
+                ref_obs, *_ = ref.step(action)
+            obs, *_ = self.env.step(action)
+            self.assertTrue(np.allclose(obs["observation"], ref_obs["observation"]))
         ref.close()
-        self.assertTrue(np.allclose(obs["observation"], ref_obs["observation"]))
+
+    def test_speed_stays_within_the_cap(self):
+        # The library caps speed at 5 per axis before each substep, and one substep
+        # of full force then adds about 0.2. With a single cap per 10 Hz step the
+        # ball reaches about 7, so 5.5 separates the two.
+        self.env.reset(seed=0, options={"reset_cell": [7, 1], "goal_cell": [1, 7]})
+        for _ in range(10):
+            obs, *_ = self.env.step(np.array([1.0, 0.0], dtype=np.float32))
+            self.assertLessEqual(np.abs(obs["observation"][2:]).max(), 5.5)
 
     def test_start_and_goal_noise(self):
         start_centre, goal_centre = cell_to_xy(M1, (4, 1)), cell_to_xy(M1, (4, 7))
@@ -171,9 +187,32 @@ class TestWallsStopTheBall(unittest.TestCase):
 class TestResetGuard(unittest.TestCase):
     def test_reset_without_cells_is_refused(self):
         env = make_env("M1")
-        for options in [None, {}, {"reset_cell": [4, 1]}, {"goal_cell": [4, 7]}]:
+        for options in [None, {}, {"reset_cell": [4, 1]}, {"goal_cell": [4, 7]},
+                        {"reset_cell": None, "goal_cell": None},
+                        {"reset_cell": [4, 1], "goal_cell": None}]:
             with self.assertRaises(ValueError):
                 env.reset(seed=0, options=options)
+        env.close()
+
+    def test_held_out_goals_are_refused_by_default(self):
+        env = make_env("M1")
+        for goal in M1_HELD_OUT_REGION:
+            with self.assertRaises(ValueError):
+                env.reset(seed=0, options={"reset_cell": [4, 1], "goal_cell": list(goal)})
+        env.close()
+
+    def test_held_out_goals_need_an_explicit_choice(self):
+        env = make_env("M1", allowed_goals=M1_HELD_OUT_REGION)
+        obs, _ = env.reset(seed=0, options={"reset_cell": [4, 1], "goal_cell": [4, 12]})
+        self.assertEqual(xy_to_cell(M1, obs["desired_goal"]), (4, 12))
+        with self.assertRaises(ValueError):  # and then demo goals are refused
+            env.reset(seed=0, options=M1_OPTS)
+        env.close()
+
+    def test_start_in_a_wall_is_refused(self):
+        env = make_env("M1")
+        with self.assertRaises(ValueError):
+            env.reset(seed=0, options={"reset_cell": [2, 2], "goal_cell": [4, 7]})
         env.close()
 
 
