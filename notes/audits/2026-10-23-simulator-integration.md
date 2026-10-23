@@ -23,4 +23,4 @@
 | 11 | low | `mazes.py` says the corridor leaves the ring "at (4, 7)"; (4, 8) is the first corridor cell. R_h is defined only as "everything east". | M1 comment | Name (4, 8); define R_h as a cell set | Fixed: `M1_DEMO_REGION`, `M1_HELD_OUT_REGION` (89bc829) |
 | 12 | info | Action space `Box(-1, 1, (2,))` matches the spec. | — | — | — |
 
-All findings are resolved. The episode-length placeholder also changed from 300 to 100 steps, because 300 steps at 10 Hz is 30 s.
+All findings were addressed; a second audit (`2026-10-23-simulator-fixes.md`) found that 1, 2 and 5 were only partly fixed, and those gaps are closed there. The episode-length placeholder also changed from 300 to 100 steps, because 300 steps at 10 Hz is 30 s.
