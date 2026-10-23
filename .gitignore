@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Experiment outputs (results are regenerated from configs, not committed)
+runs/
+wandb/
+*.ckpt
+
+# OS
+.DS_Store
