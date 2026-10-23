@@ -27,6 +27,8 @@ each cell is 1 unit wide, x grows with column and y grows *upward*, so row 1 has
 a larger y than row 7.
 """
 
+import math
+
 import gymnasium as gym
 import gymnasium_robotics
 import numpy as np
@@ -88,12 +90,29 @@ class RequireCells(gym.Wrapper):
         return self.env.reset(seed=seed, options=options)
 
 
-def cell_to_xy(env: gym.Env, cell: tuple[int, int]) -> np.ndarray:
-    """Centre of grid cell (row, col) in simulator coordinates."""
-    return env.unwrapped.maze.cell_rowcol_to_xy(np.asarray(cell))
+def cell_to_xy(grid: list[list[int]], cell: tuple[int, int]) -> np.ndarray:
+    """Centre of grid cell (row, col) in simulator coordinates.
+
+    Computed from the grid's size alone, not by asking the simulator, so that the
+    tests compare two independent sources. Cells are 1 unit wide and the maze is
+    centred on (0, 0); y grows upward, so row 0 is at the top.
+    """
+    n_rows, n_cols = len(grid), len(grid[0])
+    r, c = cell
+    return np.array([c + 0.5 - n_cols / 2, n_rows / 2 - r - 0.5])
 
 
-def xy_to_cell(env: gym.Env, xy) -> tuple[int, int]:
-    """Grid cell (row, col) containing simulator point (x, y)."""
-    r, c = env.unwrapped.maze.cell_xy_to_rowcol(np.asarray(xy))
-    return int(r), int(c)
+def xy_to_cell(grid: list[list[int]], xy) -> tuple[int, int]:
+    """Grid cell (row, col) containing simulator point (x, y).
+
+    Cells include their west and north edges and exclude their east and south
+    edges, so a point exactly on a shared edge goes to the cell east of it, or to
+    the cell south of it. (This matches the library.) Points outside the maze
+    raise an error instead of returning an invalid cell.
+    """
+    n_rows, n_cols = len(grid), len(grid[0])
+    x, y = float(xy[0]), float(xy[1])
+    r, c = math.floor(n_rows / 2 - y), math.floor(x + n_cols / 2)
+    if not (0 <= r < n_rows and 0 <= c < n_cols):
+        raise ValueError(f"point {(x, y)} is outside the {n_rows}x{n_cols} maze")
+    return r, c

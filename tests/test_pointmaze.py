@@ -37,12 +37,12 @@ class TestPointMazeM1(unittest.TestCase):
     def test_cells_round_trip(self):
         self.env.reset(seed=0, options={"reset_cell": [1, 1], "goal_cell": [1, 7]})
         for cell in free_cells(M1):
-            self.assertEqual(xy_to_cell(self.env, cell_to_xy(self.env, cell)), cell)
+            self.assertEqual(xy_to_cell(M1, cell_to_xy(M1, cell)), cell)
 
     def test_start_and_goal_land_in_requested_cells(self):
         obs, _ = self.env.reset(seed=1, options={"reset_cell": [7, 1], "goal_cell": [7, 7]})
-        self.assertEqual(xy_to_cell(self.env, obs["observation"][:2]), (7, 1))
-        self.assertEqual(xy_to_cell(self.env, obs["desired_goal"]), (7, 7))
+        self.assertEqual(xy_to_cell(M1, obs["observation"][:2]), (7, 1))
+        self.assertEqual(xy_to_cell(M1, obs["desired_goal"]), (7, 7))
 
     def test_ball_never_enters_a_wall_cell(self):
         # Push the ball hard in random directions; it must stay in free cells.
@@ -51,7 +51,7 @@ class TestPointMazeM1(unittest.TestCase):
         self.env.reset(seed=2, options={"reset_cell": [4, 1], "goal_cell": [4, 7]})
         for _ in range(2000):
             obs, _, term, trunc, _ = self.env.step(rng.uniform(-1, 1, size=2).astype(np.float32))
-            self.assertIn(xy_to_cell(self.env, obs["observation"][:2]), free)
+            self.assertIn(xy_to_cell(M1, obs["observation"][:2]), free)
             if term or trunc:
                 self.env.reset(options={"reset_cell": [4, 1], "goal_cell": [4, 7]})
 
