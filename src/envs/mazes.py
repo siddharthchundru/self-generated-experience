@@ -24,8 +24,8 @@ Cell = tuple[int, int]  # (row, col)
 #   demo region. A start on the west side and a goal on the east side can be
 #   joined by the NORTH arm (row 1) or the SOUTH arm (row 7). For pairs in the
 #   upper rows the north arm is shorter; for pairs in the lower rows, the south.
-#   A corridor leaves the ring at (4, 7) and leads east to a small held-out
-#   region that demonstrations never visit.
+#   A corridor starts at (4, 8), just east of the ring cell (4, 7), and leads
+#   to a small held-out region that demonstrations never visit.
 M1: list[list[int]] = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
@@ -38,8 +38,9 @@ M1: list[list[int]] = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ]
 
-# Regions. The demo region is the ring; the held-out region is
-# everything east of it.
+# Regions, as explicit cell sets. The demo region R_d is the ring; the held-out
+# region R_h is every other free cell, from the corridor entry (4, 8) eastward.
+# Training goals must come from R_d; R_h is only for the S_out evaluation.
 DEMO_COLS = range(1, 8)
 NORTH_ARM: frozenset[Cell] = frozenset((1, c) for c in range(2, 7))
 SOUTH_ARM: frozenset[Cell] = frozenset((7, c) for c in range(2, 7))
@@ -61,6 +62,10 @@ M2: list[list[int]] = [
 
 def free_cells(grid: list[list[int]]) -> set[Cell]:
     return {(r, c) for r, row in enumerate(grid) for c, v in enumerate(row) if v == 0}
+
+
+M1_DEMO_REGION: frozenset[Cell] = frozenset(c for c in free_cells(M1) if c[1] in DEMO_COLS)
+M1_HELD_OUT_REGION: frozenset[Cell] = frozenset(free_cells(M1)) - M1_DEMO_REGION
 
 
 def neighbours(cell: Cell, free: set[Cell]) -> list[Cell]:

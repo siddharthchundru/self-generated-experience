@@ -35,7 +35,7 @@ class TestPointMazeM1(unittest.TestCase):
         self.assertTrue(np.all(np.isfinite(obs["observation"])))
 
     def test_cells_round_trip(self):
-        self.env.reset(seed=0)
+        self.env.reset(seed=0, options={"reset_cell": [1, 1], "goal_cell": [1, 7]})
         for cell in free_cells(M1):
             self.assertEqual(xy_to_cell(self.env, cell_to_xy(self.env, cell)), cell)
 
@@ -53,11 +53,11 @@ class TestPointMazeM1(unittest.TestCase):
             obs, _, term, trunc, _ = self.env.step(rng.uniform(-1, 1, size=2).astype(np.float32))
             self.assertIn(xy_to_cell(self.env, obs["observation"][:2]), free)
             if term or trunc:
-                self.env.reset()
+                self.env.reset(options={"reset_cell": [4, 1], "goal_cell": [4, 7]})
 
     def test_m2_builds(self):
         env = make_env("M2")
-        obs, _ = env.reset(seed=0)
+        obs, _ = env.reset(seed=0, options={"reset_cell": [1, 1], "goal_cell": [6, 6]})
         self.assertEqual(obs["observation"].shape, (4,))
         env.close()
 

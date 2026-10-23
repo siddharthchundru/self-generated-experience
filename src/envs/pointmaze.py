@@ -52,8 +52,9 @@ _BASE_ID = "PointMaze_UMaze-v3"
 def make_env(maze: str = "M1", max_episode_steps: int = MAX_EPISODE_STEPS) -> gym.Env:
     """Return a PointMaze environment on one of this project's layouts.
 
-    Start and goal cells are chosen per episode through reset options:
+    Start and goal cells must be named on every reset:
         env.reset(seed=0, options={"reset_cell": [r, c], "goal_cell": [r, c]})
+    A reset without them raises an error (see RequireCells).
     """
     env = gym.make(
         _BASE_ID,
@@ -67,7 +68,24 @@ def make_env(maze: str = "M1", max_episode_steps: int = MAX_EPISODE_STEPS) -> gy
     inner.point_env.frame_skip = FRAME_SKIP
     inner.position_noise_range = POSITION_NOISE
     assert abs(inner.point_env.dt - 1 / CONTROL_HZ) < 1e-9
-    return env
+    return RequireCells(env)
+
+
+class RequireCells(gym.Wrapper):
+    """Refuse any reset that does not name both the start and the goal cell.
+
+    Why: when no cell is named, the library picks a random free cell, and about a
+    third of M1's free cells are in the held-out region. A training goal drawn
+    there would let the agent practise on the cells reserved for the
+    generalisation test (S_out). Forcing every caller to name its cells means
+    goals come only from each condition's own, checkable rule.
+    """
+
+    def reset(self, *, seed=None, options=None):
+        options = options or {}
+        if "reset_cell" not in options or "goal_cell" not in options:
+            raise ValueError("reset needs options={'reset_cell': [r, c], 'goal_cell': [r, c]}")
+        return self.env.reset(seed=seed, options=options)
 
 
 def cell_to_xy(env: gym.Env, cell: tuple[int, int]) -> np.ndarray:
