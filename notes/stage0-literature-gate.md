@@ -1,4 +1,4 @@
-# Stage 0 literature gate — Project A
+# Stage 0 literature check
 
 *Siddharth Chundru · 22 October 2026*
 
@@ -11,8 +11,8 @@
 | Work | What it shows | Overlap | Consequence |
 | --- | --- | --- | --- |
 | [Longhini et al., 2026](https://arxiv.org/abs/2605.11387) (BMD, ICML 2026) | RL fine-tuning of pre-trained generative policies (e.g. diffusion) collapses demonstrated modes into one reward-maximising mode. An intrinsic mutual-information reward over a discrete latent preserves them. Tested on a 2D four-mode navigation task, ManiSkill, ANYmal and Franka Kitchen; reports mode-weighted success, mode coverage and mode entropy. Perturbation tests (one locked joint, observation noise) on ANYmal only. | **Highest.** Mode collapse under task-directed improvement, measured with mode metrics, in a 2D navigation task. | Cite as the closest work. "Self-practice narrows repertoire" is no longer a headline. Adopt their mode-weighted success alongside route repertoire for comparability. |
-| [Hamid et al., 2025](https://arxiv.org/abs/2509.25424) (Polychromic Objectives) | RL fine-tuning of pretrained policies collapses them onto a few easily exploited outputs; an objective that explicitly rewards diverse generations prevents this and generalises better under large perturbations. BabyAI, MiniGrid, Algorithmic Creativity. | **Medium–high.** Collapse, diversity and perturbation tests in grid mazes. | Diversity comes from an explicit objective with fixed goals, not from goal selection; no re-learning control. Cite with BMD. |
-| [Du et al., 2024](https://arxiv.org/abs/2406.15917) ("To Err is Robotic") | At deployment, a demonstration-trained diffusion policy detects stalled progress and resamples among its own candidate actions, away from recorded failures, with no gradient updates. | **Medium–high, as motivation.** | Deployment-time recovery of this kind assumes the base policy still has alternative modes. Project A asks which ways of practising keep them. |
+| [Ibn Hamid et al., 2025](https://arxiv.org/abs/2509.25424) (Polychromic Objectives) | RL fine-tuning of pretrained policies collapses them onto a few easily exploited outputs; an objective that explicitly rewards diverse generations prevents this and generalises better under large perturbations. BabyAI, MiniGrid, Algorithmic Creativity. | **Medium–high.** Collapse, diversity and perturbation tests in grid mazes. | Diversity comes from an explicit objective with fixed goals, not from goal selection; no re-learning control. Cite with BMD. |
+| [Du et al., 2024](https://arxiv.org/abs/2406.15917) ("To Err is Robotic") | At deployment, a demonstration-trained diffusion policy detects stalled progress and resamples among its own candidate actions, away from recorded failures, with no gradient updates. | **Medium–high, as motivation.** | Deployment-time recovery of this kind assumes the base policy still has alternative modes. This project asks which ways of practising keep them. |
 | [Jin et al., 2025a](https://arxiv.org/abs/2505.01396) (SIME); [Jin et al., 2025b](https://arxiv.org/abs/2509.19292) (SOE) | In robot self-improvement from demonstrations, policies repeat existing behaviour; injecting structured exploration improves self-improvement. | High, as motivation. | Method papers in manipulation; no controlled comparison of practice strategies, no adaptation tests. Already cited. |
 | [Liu et al., 2025](https://arxiv.org/abs/2505.19789) | Fine-tuning OpenVLA with RL (PPO) instead of SFT generalises better on execution shifts. RL rollouts cover more of the workspace, while SFT rollouts cluster on the demonstrations' planner paths (a qualitative observation). | Medium. | In tension with BMD: RL can widen *state coverage* while collapsing *action modes*. This supports measuring coverage on the data and repertoire on the policy, and expecting them to disagree. |
 | [Yue et al., 2025](https://arxiv.org/abs/2504.13837) (NeurIPS 2025); [Wu et al., 2026](https://proceedings.iclr.cc/paper_files/paper/2026/file/a61aa495e3d56cf793ca4139d45bd877-Paper-Conference.pdf) (ICLR 2026) | In LLMs, RL with verifiable rewards raises pass@1 but narrows the set of problems solvable at large k (Yue et al.). Fine-tuning collapses reasoning modes and limits test-time scaling (Wu et al. show it for SFT and distillation, and cite Yue et al. for RL). | Different domain, same phenomenon. | Framing only: the maze is a transparent instance of a collapse also seen in language-model post-training. |
@@ -27,12 +27,9 @@
 2. **Repertoire → adaptation, tested causally.** BMD's perturbation tests are one locked joint and observation noise, on ANYmal only. SMERL shows diversity aids adaptation but trains for diversity explicitly. A blocked-route test on each agent's own dominant route, followed by a common adaptation procedure, is not in this set.
 3. **Data vs. loop.** None of the self-improvement papers retrain a fresh learner on the final data to locate where an advantage lives.
 
-## Decision and changes
+## Implications for this project
 
-**Keep the project.** Reframe the lead claim:
-
-- *Before:* "Self-practice narrows the repertoire, so it adapts worse than intrinsic exploration."
-- *After:* "Task-directed improvement is known to collapse modes. Does intrinsically chosen practice preserve them without an explicit diversity objective — and does the preserved repertoire buy adaptation?"
+**The project proceeds, with this framing:** Task-directed improvement is known to collapse modes. Does intrinsically chosen practice preserve them without an explicit diversity objective — and does the preserved repertoire buy adaptation?
 
 Concrete changes:
 

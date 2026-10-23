@@ -1,4 +1,4 @@
-"""Maze layouts for Project A, and the planner checks that verify them.
+"""Maze layouts for this project, and the planner checks that verify them.
 
 What this file does, in one sentence: it defines the maze grids (1 = wall, 0 = free)
 and checks, with plain graph search, that the primary maze M1 has exactly the
