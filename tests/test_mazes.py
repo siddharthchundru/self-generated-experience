@@ -14,7 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from envs.mazes import (  # noqa: E402
-    M1, M2, DEMO_COLS, NORTH_ARM, SOUTH_ARM,
+    M1, M2, DEMO_COLS, NORTH_ARM, SOUTH_ARM, M1_DEMO_REGION, M1_HELD_OUT_REGION,
     free_cells, shortest_path, cycle_rank, route_class,
 )
 
@@ -55,7 +55,26 @@ class TestM1(unittest.TestCase):
         self.assertIsNone(path)
 
 
+class TestM1Pinned(unittest.TestCase):
+    """Pin M1's layout so an accidental edit (a flip, a moved corridor) fails.
+
+    The ring is symmetric top to bottom, so the structural tests above would
+    still pass if M1 were flipped; the held-out region is not symmetric.
+    """
+
+    def test_held_out_region_cells(self):
+        expected = {(4, 8), (4, 9), (4, 10), (4, 11), (4, 12), (5, 12),
+                    (6, 9), (6, 10), (6, 11), (6, 12), (7, 9)}
+        self.assertEqual(set(M1_HELD_OUT_REGION), expected)
+        self.assertEqual(len(M1_DEMO_REGION), 24)
+
+
 class TestM2(unittest.TestCase):
+    def test_is_the_library_medium_maze(self):
+        # M2 must be the standard layout, unmodified, for comparability.
+        from gymnasium_robotics.envs.maze.maps import MEDIUM_MAZE
+        self.assertEqual(M2, MEDIUM_MAZE)
+
     def test_standard_medium_has_loops(self):
         # Sanity check that M2 is the multi-loop standard layout, not a corridor.
         self.assertGreater(cycle_rank(free_cells(M2)), 1)
