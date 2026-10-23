@@ -43,7 +43,7 @@ A clear null on H2 and H3, shown by equivalence tests, counts as an answer.
 
 ## 4. Environment
 
-- **Simulator.** [Gymnasium-Robotics PointMaze](https://robotics.farama.org/envs/maze/point_maze/): a force-actuated 2-DoF ball in MuJoCo at 10 Hz. Observation: position and velocity. Goal: a 2-D position. Action: a 2-D force in [−1, 1].
+- **Simulator.** [Gymnasium-Robotics PointMaze](https://robotics.farama.org/envs/maze/point_maze/): a force-actuated 2-DoF ball in MuJoCo at 10 Hz. Observation: position and velocity. Goal: a 2-D position. Action: a 2-D force in [−1, 1]. An episode ends when the ball is within 0.45 of the goal (the library's success radius) or after a fixed number of steps (100 by default, set in the pilot). Start and goal are placed at the centre of their cells plus uniform noise of up to ±0.25 cell widths. Reward is sparse and is logged, not learned from.
 - **M1, custom, primary.** Key start–goal pairs have exactly two topologically distinct routes, one clearly shorter.
   - The *demo region* R_d contains the two-route structure. A separate *held-out region* R_h is reached through a corridor.
   - The layout is frozen before any condition runs, and route classes are verified by a planner.
