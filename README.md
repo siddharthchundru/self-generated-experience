@@ -3,8 +3,8 @@
 Goal selection, behavioural repertoire and recovery in self-improving policies.
 
 > **Status: Stage 1 (harness) in progress.**
-> - Done: the literature check, and the primary maze with automated planner checks.
-> - Next: simulator integration, the scripted expert, the evaluation suite, the route classifier and the determinism test.
+> - Done: the literature check; the mazes with automated planner checks; integration with the MuJoCo PointMaze simulator at the specified 10 Hz, with guards against goal leakage. The integration went through three independent audits ([`notes/audits/`](notes/audits/)).
+> - Next: the scripted expert, the evaluation suite, the route classifier and the determinism test.
 > - No experiments have been run and no results are reported. The plan is fixed in a pre-registration before the main runs.
 
 ## Question
@@ -73,26 +73,30 @@ The full design is in [`docs/spec.md`](docs/spec.md).
 - [x] **Stage 0:** literature check
 - [ ] **Stage 1:** harness
   - [x] maze M1 with planner checks
-  - [ ] simulator integration, scripted expert, evaluation suite, route classifier, determinism test
+  - [x] simulator integration (audited)
+  - [ ] scripted expert, evaluation suite, route classifier, determinism test
 - [ ] **Stage 2:** learner, conditions, pilot, frozen pre-registration, main runs, re-learning control, report
 - [ ] **Stage 3:** second maze, second learner, further conditions and ablations
 - [ ] **Stage 4:** a goal-conditioned manipulation task with two solutions
 
-Each stage ends in a gate that must pass before the next starts. Before a stage closes, its code is reviewed by a separate AI coding agent (not the one that wrote it) for budget parity, goal leakage and extra gradient updates; those review reports will be committed to `notes/audits/`.
+Each stage ends in a gate that must pass before the next starts. Before a stage closes, its code is reviewed by a separate AI coding agent (not the one that wrote it) for budget parity, goal leakage and extra gradient updates; those review reports are committed to [`notes/audits/`](notes/audits/).
 
 ## Repository
 
 ```
 src/envs/mazes.py        maze layouts and planner checks           (done)
-tests/test_mazes.py      tests for the maze structure              (done)
+src/envs/pointmaze.py    PointMaze simulator on these mazes        (done)
+tests/                   tests for mazes and simulator             (done)
 notes/                   literature check
+notes/audits/            independent audit reports
 docs/spec.md             full design specification
 src/agents/, src/eval/   learner, goal selectors, evaluation       (Stage 1–2)
 ```
 
-Run the tests (Python 3.10+, no other dependencies yet):
+Run the tests (tested on Python 3.13; versions pinned in `requirements.txt`):
 
 ```
+pip install -r requirements.txt
 python -m unittest discover -s tests
 ```
 
