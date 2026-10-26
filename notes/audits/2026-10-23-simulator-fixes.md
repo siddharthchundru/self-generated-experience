@@ -41,4 +41,4 @@
 | M1 or M2 flipped or transposed in `mazes.py`; an M2 free cell made a wall | No; now caught by the layout pins |
 | `None` goal through the guard | No; now tested |
 
-Not yet re-audited: commits 2b80a0a and 16cae5c.
+Commits 2b80a0a and 16cae5c were re-audited on 26 October: see `2026-10-26-simulator-fixes-reaudit.md`.
