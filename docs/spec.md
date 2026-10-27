@@ -22,10 +22,11 @@ A goal-conditioned agent starts from a few demonstrations that cover only part o
 - When a demonstration-pretrained policy is improved with task reward, its behavioural modes collapse ([Longhini et al., 2026](https://arxiv.org/abs/2605.11387); [Ibn Hamid et al., 2025](https://arxiv.org/abs/2509.25424)).
 - The published fixes add an *explicit* diversity objective.
 - Deployment-time recovery methods ([Du et al., 2024](https://arxiv.org/abs/2406.15917)) assume the base policy still has alternative modes to fall back on.
+- A diverse repertoire that can be *selected from* aids recovery: a pre-built archive searched after damage ([Cully et al., 2015](https://arxiv.org/abs/1407.3501)), a set of near-optimal policies ([Kumar et al., 2020](https://arxiv.org/abs/2010.14484)), and, closest to this project, switching between a policy's learned modes when a maze path is blocked ([Li et al., 2024](https://arxiv.org/abs/2406.00681)).
 
 **What this project tests.**
 1. Does *choosing which goals to practise* (frontier novelty, as in [MEGA](https://arxiv.org/abs/2007.02832)) preserve repertoire on its own, with the learner and its objective unchanged?
-2. Does a preserved repertoire actually buy recovery?
+2. Does a repertoire preserved *inside* one goal-conditioned policy, with no latent and no mechanism for selecting a mode, speed recovery under a common adaptation procedure? The existing work recovers by selecting among indexed modes, not by relearning.
 3. Through a re-learning control: does any advantage live in the collected data, or in the active loop that collected it?
 
 **Type of contribution.** A controlled empirical study, not a new method. The literature check is in [`notes/stage0-literature-gate.md`](../notes/stage0-literature-gate.md).
@@ -78,7 +79,7 @@ All conditions share D0, the budget N, the episode length and the start distribu
 | C4 | Frontier novelty | Pursue past achieved goals in the lowest-density region (MEGA-style kernel density estimate) | MVE |
 | C5 | Mixture | C3 with probability *p*, otherwise C4 | Stage 3 |
 | C6 | Learning progress | ALP-GMM-style goal selection | Stage 3 |
-| C7 | Explicit diversity | C3 plus a BMD-style mutual-information bonus; compares implicit with explicit preservation | Stage 3 |
+| C7 | Explicit diversity (form chosen after the first experiment) | Two candidates: (a) diversity in the objective, an adaptation of BMD, which needs a latent-conditioned learner because GCSL has no reward to add a bonus to; (b) diversity in goal selection, an archive of how task goals have been reached, with two-goal episodes (a waypoint from an under-filled niche, then the task goal), after Go-Explore | Stage 3 |
 
 ## 7. Controls
 
