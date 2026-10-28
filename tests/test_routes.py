@@ -10,7 +10,8 @@ What they establish:
    expert never does: a dip into one arm before going round the other way, a
    full crossing followed by a return and a crossing on the other arm, never
    getting across, and touching the midline exactly and going back.
-3. A crossing outside both arms, which the walls make impossible, raises an
+3. On the tuning maze M0 the rule uses M0's own midline and arms.
+4. A crossing outside both arms, which the walls make impossible, raises an
    error instead of being silently classified.
 
 The hand-labelled check on messy simulated trajectories (the Stage 1 gate) is
@@ -25,15 +26,15 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from envs.mazes import M1, route_class  # noqa: E402
+from envs.mazes import M0, M1, route_class  # noqa: E402
 from envs.pointmaze import cell_to_xy, make_env, xy_to_cell  # noqa: E402
 from expert import run_episode  # noqa: E402
 from routes import MIDLINE_X, trajectory_route  # noqa: E402
 
 
-def through(*cells):
+def through(*cells, grid=M1):
     """Positions along straight segments joining cell centres, 5 points per segment."""
-    pts = [cell_to_xy(M1, c) for c in cells]
+    pts = [cell_to_xy(grid, c) for c in cells]
     out = []
     for a, b in zip(pts, pts[1:]):
         for f in np.linspace(0, 1, 5, endpoint=False):
@@ -85,6 +86,15 @@ class TestHandBuiltTrajectories(unittest.TestCase):
         path = np.array([[MIDLINE_X - 0.5, 0.0], [MIDLINE_X + 0.5, 0.0]])  # through the block
         with self.assertRaises(ValueError):
             trajectory_route(path)
+
+    def test_m0_uses_its_own_midline(self):
+        # On M0 the midline is column 5 and the arms are rows 1 and 5.
+        dip = through((2, 1), (1, 1), (1, 4), (1, 1), (5, 1), (5, 9), (2, 9), grid=M0)
+        self.assertEqual(trajectory_route(dip, "M0"), "south")
+        across = through((2, 1), (1, 1), (1, 9), (2, 9), grid=M0)
+        self.assertEqual(trajectory_route(across, "M0"), "north")
+        with self.assertRaises(KeyError):
+            trajectory_route(across, "M2")  # no ring
 
     def test_velocity_columns_are_ignored(self):
         path = through((2, 1), (1, 1), (1, 7), (2, 7))

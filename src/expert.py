@@ -1,9 +1,10 @@
 """The scripted expert that produces the demonstrations (D0).
 
 What this file does, in one sentence: given a start cell, a goal cell and a
-route ("north" or "south" on M1, or "shortest"), it plans the cell sequence with
-the grid planner in `mazes.py` and drives the ball along it with a simple
-proportional-derivative (PD) controller.
+route ("north" or "south" on a ring maze, M0 or M1, or "shortest" on any
+maze), it plans the cell sequence with the grid planner in `mazes.py` and
+drives the ball along it with a simple proportional-derivative (PD)
+controller.
 
 Why it matters: the spec (section 6) requires the demonstrations to show *both*
 routes for every two-route pair, in fixed equal counts, because mode collapse
@@ -28,7 +29,7 @@ variation between its demonstrations comes from the start and goal noise.
 
 import numpy as np
 
-from envs.mazes import NORTH_ARM, SOUTH_ARM, shortest_path
+from envs.mazes import ring_of, shortest_path
 from envs.pointmaze import cell_to_xy
 
 # Controller settings. Chosen by hand on M1 so the expert succeeds on every pair
@@ -37,18 +38,20 @@ KP = 10.0
 KD = 1.5
 SWITCH_RADIUS = 0.4
 
-ROUTE_BLOCKS = {
-    # To force a route, the planner treats the *other* arm as blocked.
-    "north": SOUTH_ARM,
-    "south": NORTH_ARM,
-    "shortest": frozenset(),
-}
+def route_blocks(grid, route):
+    """Cells the planner must avoid to force `route`: to take the north arm it
+    treats the south arm as blocked, and vice versa. "shortest" forces nothing
+    and works on any maze; "north" and "south" need a ring maze (M0 or M1)."""
+    if route == "shortest":
+        return frozenset()
+    ring = ring_of(grid)
+    return {"north": ring["south_arm"], "south": ring["north_arm"]}[route]
 
 
 def plan_cells(grid, start, goal, route="shortest", blocked=frozenset()):
     """Cell sequence from start to goal along `route`, also avoiding `blocked`
     (for example the P1 wall cell). Raises if no such route exists."""
-    avoid = frozenset(ROUTE_BLOCKS[route]) | frozenset(blocked)
+    avoid = frozenset(route_blocks(grid, route)) | frozenset(blocked)
     path = shortest_path(grid, tuple(start), tuple(goal), blocked=avoid)
     if path is None:
         raise ValueError(f"no {route} route from {start} to {goal} avoiding {sorted(blocked)}")

@@ -18,7 +18,9 @@ What they establish:
    driving a different route.
 5. Demonstrations on M1's ring pairs never enter the held-out region, so goals
    relabelled from their states cannot leak into it.
-6. The episode's `success` is the final step only: a ball that reaches the goal
+6. The same holds on the tuning maze M0: both routes on every west-east pair,
+   classified correctly by the trajectory route classifier, inside its ring.
+7. The episode's `success` is the final step only: a ball that reaches the goal
    and is then pushed away counts as a failure. The expert ends close to the
    exact (noisy) goal, not merely inside its cell.
 
@@ -33,9 +35,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import numpy as np  # noqa: E402
 
-from envs.mazes import M1, M1_DEMO_REGION, M2, free_cells, route_class  # noqa: E402
+from envs.mazes import M0, M0_DEMO_REGION, M1, M1_DEMO_REGION, M2, free_cells, route_class  # noqa: E402
 from envs.pointmaze import make_env, xy_to_cell  # noqa: E402
 from expert import plan_cells, run_episode  # noqa: E402
+from routes import trajectory_route  # noqa: E402
 
 T = 70  # long enough for the longest M1 pair (about 53 steps); not the experiment's T
 ROWS = range(1, 8)
@@ -61,6 +64,21 @@ class TestBothRoutesOnM1(unittest.TestCase):
                         self.assertLessEqual(visited, M1_DEMO_REGION)
                         final_distance = np.linalg.norm(ep["observations"][-1][:2] - ep["goal"])
                         self.assertLess(final_distance, 0.2)
+        env.close()
+
+
+class TestBothRoutesOnM0(unittest.TestCase):
+    def test_every_pair_every_route(self):
+        env = make_env("M0", max_episode_steps=T)
+        for row in range(1, 6):
+            for route in ("north", "south"):
+                for seed in range(5):
+                    with self.subTest(row=row, route=route, seed=seed):
+                        ep = run_episode(env, M0, (row, 1), (row, 9), route, seed=seed)
+                        self.assertTrue(ep["success"])
+                        self.assertEqual(trajectory_route(ep["observations"], "M0"), route)
+                        visited = {xy_to_cell(M0, o[:2]) for o in ep["observations"]}
+                        self.assertLessEqual(visited, M0_DEMO_REGION)
         env.close()
 
 
@@ -134,6 +152,10 @@ class TestAllPairs(unittest.TestCase):
 
 
 class TestImpossibleRoute(unittest.TestCase):
+    def test_named_route_on_a_maze_without_a_ring_is_refused(self):
+        with self.assertRaises(ValueError):
+            plan_cells(M2, (1, 1), (6, 6), "north")
+
     def test_route_through_both_blocked_arms_is_refused(self):
         with self.assertRaises(ValueError):
             plan_cells(M1, (2, 1), (2, 7), "north", blocked=frozenset({(1, 4)}))
