@@ -245,5 +245,41 @@ class TestDeterminism(unittest.TestCase):
         self.assertTrue(np.array_equal(rollout(), rollout()))
 
 
+class TestBlockedCells(unittest.TestCase):
+    """Perturbation P1 turns one free cell into a wall at evaluation time."""
+
+    def test_blocked_cell_becomes_a_wall_in_the_simulator(self):
+        env = make_env("M1", blocked_cells=frozenset({(1, 4)}))
+        model = env.unwrapped.point_env.model
+        data = env.unwrapped.point_env.data
+        env.reset(seed=0, options={"reset_cell": [1, 1], "goal_cell": [1, 2]})
+        blocks = {xy_to_cell(M1, data.geom_xpos[g][:2]) for g in range(model.ngeom)
+                  if model.geom(g).name.startswith("block")}
+        env.close()
+        self.assertEqual(blocks, wall_cells(M1) | {(1, 4)})
+
+    def test_ball_cannot_pass_the_block(self):
+        # Full force east along the north arm from (1, 3): the ball stays west of (1, 4).
+        env = make_env("M1", max_episode_steps=1000, blocked_cells=frozenset({(1, 4)}))
+        obs, _ = env.reset(seed=0, options={"reset_cell": [1, 3], "goal_cell": [1, 7]})
+        for _ in range(50):
+            obs, *_ = env.step(np.array([1.0, 0.0], dtype=np.float32))
+            self.assertEqual(xy_to_cell(M1, obs["observation"][:2]), (1, 3))
+        env.close()
+
+    def test_block_must_be_a_free_cell_and_is_no_longer_a_goal(self):
+        with self.assertRaises(ValueError):
+            make_env("M1", blocked_cells=frozenset({(2, 2)}))  # already a wall
+        env = make_env("M1", blocked_cells=frozenset({(1, 4)}))
+        with self.assertRaises(ValueError):
+            env.reset(seed=0, options={"reset_cell": [1, 1], "goal_cell": [1, 4]})
+        env.close()
+
+    def test_unblocked_env_is_unchanged(self):
+        # Building a blocked env must not alter the shared grid.
+        make_env("M1", blocked_cells=frozenset({(1, 4)})).close()
+        self.assertEqual(M1[1][4], 0)
+
+
 if __name__ == "__main__":
     unittest.main()

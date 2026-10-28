@@ -64,6 +64,7 @@ def make_env(
     maze: str = "M1",
     max_episode_steps: int = MAX_EPISODE_STEPS,
     allowed_goals: frozenset | None = None,
+    blocked_cells: frozenset = frozenset(),
 ) -> gym.Env:
     """Return a PointMaze environment on one of this project's layouts.
 
@@ -72,10 +73,18 @@ def make_env(
     and the goal cell must be in `allowed_goals`. On M1 the default is the demo
     region R_d; the S_out evaluation passes M1_HELD_OUT_REGION explicitly. On M2,
     which has no held-out region, every free cell is allowed. See RequireCells.
+
+    `blocked_cells` turns the named free cells into walls. This is how the route
+    block (perturbation P1) is applied at evaluation; training never passes it.
     """
+    grid = [list(row) for row in MAZES[maze]]
+    for r, c in blocked_cells:
+        if grid[r][c] != 0:
+            raise ValueError(f"blocked cell {(r, c)} is not a free cell")
+        grid[r][c] = 1
     env = gym.make(
         _BASE_ID,
-        maze_map=MAZES[maze],
+        maze_map=grid,
         reward_type="sparse",
         continuing_task=True,    # reaching the goal does not end the episode
         reset_target=False,      # and does not move the goal
@@ -91,7 +100,8 @@ def make_env(
     assert abs(point.dt - 1 / CONTROL_HZ) < 1e-9
     if allowed_goals is None:
         allowed_goals = DEFAULT_ALLOWED_GOALS[maze]
-    return RequireCells(env, MAZES[maze], allowed_goals)
+    allowed_goals = frozenset(allowed_goals) - frozenset(blocked_cells)
+    return RequireCells(env, grid, allowed_goals)
 
 
 def _step_with_cap_per_substep(self, action):

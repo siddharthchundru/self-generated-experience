@@ -7,8 +7,10 @@ What they establish:
    by the final step on BOTH routes, and the route it actually drove (read from
    the simulated trajectory, not from its plan) is the one it was told to take.
    This is the gate "expert reaches ~100% on M1 on both routes".
-2. With the shorter arm's middle cell blocked (the P1 perturbation), the longer
-   route can still be planned, and it never enters the blocked cell.
+2. With a cell of the shorter arm turned into a real wall in the simulator (the
+   P1 perturbation), the expert still succeeds on the longer route. Both arm
+   ends are tested as well as the middle, because the ball passes closest to
+   them; the exact P1 cell is fixed with the evaluation suite.
 3. Taking the planner's shortest route, the expert reaches every free cell from
    every other free cell on M1 and on M2. The learner-capacity check (spec
    section 7) needs plentiful whole-maze expert data, held-out region included.
@@ -52,19 +54,24 @@ class TestBothRoutesOnM1(unittest.TestCase):
 
 
 class TestP1Block(unittest.TestCase):
-    def test_longer_route_avoids_the_blocked_cell(self):
-        # P1 blocks the shorter route with one wall cell. The middle cell of the
-        # shorter arm is used here; the exact cell is fixed with the evaluation suite.
+    def test_longer_route_succeeds_with_a_real_wall(self):
         for row in ROWS:
             if row == 4:
                 continue  # tie pairs have no shorter route
             shorter, longer = ("north", "south") if row < 4 else ("south", "north")
-            block = frozenset({(1, 4)}) if shorter == "north" else frozenset({(7, 4)})
-            cells = plan_cells(M1, (row, 1), (row, 7), longer, blocked=block)
-            self.assertFalse(set(cells) & block)
-            self.assertEqual(route_class(cells), longer)
-            with self.assertRaises(ValueError):
-                plan_cells(M1, (row, 1), (row, 7), shorter, blocked=block)
+            arm_row = 1 if shorter == "north" else 7
+            for col in (2, 4, 6):
+                block = frozenset({(arm_row, col)})
+                with self.assertRaises(ValueError):  # the shorter route is gone
+                    plan_cells(M1, (row, 1), (row, 7), shorter, blocked=block)
+                env = make_env("M1", max_episode_steps=T, blocked_cells=block)
+                for seed in range(5):
+                    with self.subTest(row=row, block=(arm_row, col), seed=seed):
+                        ep = run_episode(env, M1, (row, 1), (row, 7), longer,
+                                         blocked=block, seed=seed)
+                        self.assertTrue(ep["success"])
+                        self.assertEqual(driven_route(M1, ep["observations"]), longer)
+                env.close()
 
 
 class TestAllPairs(unittest.TestCase):
