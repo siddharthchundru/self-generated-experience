@@ -15,7 +15,8 @@ What they establish:
    and cell edges, and rejects points outside the maze.
 3. The task settings are what the spec says: 10 Hz control with exactly the
    library's dynamics (including its speed cap), ±0.25 start and goal noise,
-   success ends the episode with reward 1.
+   and fixed-length episodes: reaching the goal neither ends the episode nor
+   moves the goal.
 4. Pushing the ball into a known wall leaves it in its cell.
 5. A reset must name a free start cell and an allowed goal cell. On M1 goals
    are limited to the demo region unless the held-out region is chosen
@@ -139,19 +140,30 @@ class TestTaskSettings(unittest.TestCase):
         self.assertLessEqual(offsets.max(), POSITION_NOISE)
         self.assertGreater(offsets.max(), 0.9 * POSITION_NOISE)  # noise is really on
 
-    def test_success_ends_the_episode(self):
-        # Steer straight at a goal three cells along the north arm.
-        obs, _ = self.env.reset(seed=0, options={"reset_cell": [1, 1], "goal_cell": [1, 4]})
-        for _ in range(100):
+    def test_reaching_the_goal_does_not_end_the_episode(self):
+        # Steer straight at a goal three cells along the north arm and hold there
+        # for the whole episode. Every step must run, the goal must not move, and
+        # the final step must report success (how episode success is judged).
+        env = make_env("M1", max_episode_steps=100)
+        obs, _ = env.reset(seed=0, options={"reset_cell": [1, 1], "goal_cell": [1, 4]})
+        goal = obs["desired_goal"].copy()
+        reached_at = None
+        for t in range(100):
             pos, vel = obs["observation"][:2], obs["observation"][2:]
-            action = np.clip(2 * (obs["desired_goal"] - pos) - 0.5 * vel, -1, 1)
-            obs, reward, terminated, truncated, info = self.env.step(action.astype(np.float32))
-            if terminated or truncated:
-                break
-        self.assertTrue(terminated)
-        self.assertFalse(truncated)
-        self.assertEqual(reward, 1.0)
+            action = np.clip(2 * (goal - pos) - 0.5 * vel, -1, 1)
+            obs, reward, terminated, truncated, info = env.step(action.astype(np.float32))
+            if info["success"] and reached_at is None:
+                reached_at = t
+            self.assertFalse(terminated)
+            self.assertTrue(np.array_equal(obs["desired_goal"], goal))
+            if t < 99:
+                self.assertFalse(truncated)
+        env.close()
+        self.assertIsNotNone(reached_at)
+        self.assertLess(reached_at, 50)  # reached well before the end ...
+        self.assertTrue(truncated)       # ... yet the episode ran to its full length
         self.assertTrue(info["success"])
+        self.assertEqual(reward, 1.0)
 
     def test_episode_truncates_at_the_step_limit(self):
         env = make_env("M1", max_episode_steps=5)
@@ -231,6 +243,42 @@ class TestDeterminism(unittest.TestCase):
             return np.array(trajectory)
 
         self.assertTrue(np.array_equal(rollout(), rollout()))
+
+
+class TestBlockedCells(unittest.TestCase):
+    """Perturbation P1 turns one free cell into a wall at evaluation time."""
+
+    def test_blocked_cell_becomes_a_wall_in_the_simulator(self):
+        env = make_env("M1", blocked_cells=frozenset({(1, 4)}))
+        model = env.unwrapped.point_env.model
+        data = env.unwrapped.point_env.data
+        env.reset(seed=0, options={"reset_cell": [1, 1], "goal_cell": [1, 2]})
+        blocks = {xy_to_cell(M1, data.geom_xpos[g][:2]) for g in range(model.ngeom)
+                  if model.geom(g).name.startswith("block")}
+        env.close()
+        self.assertEqual(blocks, wall_cells(M1) | {(1, 4)})
+
+    def test_ball_cannot_pass_the_block(self):
+        # Full force east along the north arm from (1, 3): the ball stays west of (1, 4).
+        env = make_env("M1", max_episode_steps=1000, blocked_cells=frozenset({(1, 4)}))
+        obs, _ = env.reset(seed=0, options={"reset_cell": [1, 3], "goal_cell": [1, 7]})
+        for _ in range(50):
+            obs, *_ = env.step(np.array([1.0, 0.0], dtype=np.float32))
+            self.assertEqual(xy_to_cell(M1, obs["observation"][:2]), (1, 3))
+        env.close()
+
+    def test_block_must_be_a_free_cell_and_is_no_longer_a_goal(self):
+        with self.assertRaises(ValueError):
+            make_env("M1", blocked_cells=frozenset({(2, 2)}))  # already a wall
+        env = make_env("M1", blocked_cells=frozenset({(1, 4)}))
+        with self.assertRaises(ValueError):
+            env.reset(seed=0, options={"reset_cell": [1, 1], "goal_cell": [1, 4]})
+        env.close()
+
+    def test_unblocked_env_is_unchanged(self):
+        # Building a blocked env must not alter the shared grid.
+        make_env("M1", blocked_cells=frozenset({(1, 4)})).close()
+        self.assertEqual(M1[1][4], 0)
 
 
 if __name__ == "__main__":
