@@ -1,0 +1,385 @@
+{
+  "trajectory_sha256": "cd9056fe9f619c01e8892cc3c15feb4391e867ab4bdd24cb522066332ab23771",
+  "classifier_source_sha256": "6ea3cdbd9461cf3c7261669ad674117554cb3fec2f22d73071a1ecf5c1fb07db",
+  "maze_source_sha256": "fcc37bb2e43987fae3a5ced351ce13295d31023e9a3bf7680c101970945e8891",
+  "human_answer_line": "1N 2N 3S 4S 5N 6S 7N 8N 9S 10S 11N 12N 13X? 14N 15S 16X 17N 18X 19X 20S 21X 22S 23N 24N 25S 26S 27N 28S 29X 30S 31N 32S 33S 34X 35X? 36N 37X 38S 39N 40S 41N 42X 43S 44X 45S 46N 47N 48N? 49S 50S 51N 52N 53S 54X 55N 56S 57S 58S 59X? 60X",
+  "labelled": 60,
+  "certain": 56,
+  "uncertain_ids": [
+    13,
+    35,
+    48,
+    59
+  ],
+  "certain_agreement": 1.0,
+  "certain_disagreements": [],
+  "confusion_counts": {
+    "north -> north": 21,
+    "south -> south": 24,
+    "neither -> neither": 11
+  },
+  "comparisons": [
+    {
+      "id": 1,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 2,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 3,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 4,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 5,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 6,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 7,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 8,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 9,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 10,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 11,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 12,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 13,
+      "human": "neither",
+      "unsure": true,
+      "classifier": "neither"
+    },
+    {
+      "id": 14,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 15,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 16,
+      "human": "neither",
+      "unsure": false,
+      "classifier": "neither"
+    },
+    {
+      "id": 17,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 18,
+      "human": "neither",
+      "unsure": false,
+      "classifier": "neither"
+    },
+    {
+      "id": 19,
+      "human": "neither",
+      "unsure": false,
+      "classifier": "neither"
+    },
+    {
+      "id": 20,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 21,
+      "human": "neither",
+      "unsure": false,
+      "classifier": "neither"
+    },
+    {
+      "id": 22,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 23,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 24,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 25,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 26,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 27,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 28,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 29,
+      "human": "neither",
+      "unsure": false,
+      "classifier": "neither"
+    },
+    {
+      "id": 30,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 31,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 32,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 33,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 34,
+      "human": "neither",
+      "unsure": false,
+      "classifier": "neither"
+    },
+    {
+      "id": 35,
+      "human": "neither",
+      "unsure": true,
+      "classifier": "neither"
+    },
+    {
+      "id": 36,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 37,
+      "human": "neither",
+      "unsure": false,
+      "classifier": "neither"
+    },
+    {
+      "id": 38,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 39,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 40,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 41,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 42,
+      "human": "neither",
+      "unsure": false,
+      "classifier": "neither"
+    },
+    {
+      "id": 43,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 44,
+      "human": "neither",
+      "unsure": false,
+      "classifier": "neither"
+    },
+    {
+      "id": 45,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 46,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 47,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 48,
+      "human": "north",
+      "unsure": true,
+      "classifier": "north"
+    },
+    {
+      "id": 49,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 50,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 51,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 52,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 53,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 54,
+      "human": "neither",
+      "unsure": false,
+      "classifier": "neither"
+    },
+    {
+      "id": 55,
+      "human": "north",
+      "unsure": false,
+      "classifier": "north"
+    },
+    {
+      "id": 56,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 57,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 58,
+      "human": "south",
+      "unsure": false,
+      "classifier": "south"
+    },
+    {
+      "id": 59,
+      "human": "neither",
+      "unsure": true,
+      "classifier": "neither"
+    },
+    {
+      "id": 60,
+      "human": "neither",
+      "unsure": false,
+      "classifier": "neither"
+    }
+  ],
+  "ready_for_review": true,
+  "status": "review_required_before_classifier_PR"
+}
