@@ -17,10 +17,14 @@ Task settings (each set here, none inherited silently from the library):
   each of its steps; holding an action for 10 substeps with one cap would let
   the ball go faster (about 6.9). So the cap is applied before every substep,
   and one 10 Hz step is exactly ten of the library's own steps.
-- An episode ends when the ball comes within 0.45 of the goal (the library's
-  fixed success radius), or at `max_episode_steps`.
-- Sparse reward: 1 on the step that reaches the goal, otherwise 0. (The
-  learner, GCSL, does not use reward; it is logged for checks.)
+- Every episode lasts exactly `max_episode_steps` steps. Reaching the goal does
+  not end it, and the goal stays fixed (spec section 6). Episode success means
+  the ball is within 0.45 of the goal (the library's fixed success radius) at
+  the final step, i.e. `info["success"]` on the last step. Fixed length means
+  equal environment steps are equal episode counts in every condition, and it
+  matches GCSL's objective (be at the goal at the end of the episode).
+- Sparse reward: 1 on every step the ball is within the success radius,
+  otherwise 0. (The learner, GCSL, does not use reward; it is logged for checks.)
 - Start and goal positions are the centre of the requested cell plus uniform
   noise of up to ±POSITION_NOISE in x and y. The library's constructor rejects
   this argument, so it too is set after construction.
@@ -73,8 +77,8 @@ def make_env(
         _BASE_ID,
         maze_map=MAZES[maze],
         reward_type="sparse",
-        continuing_task=False,   # success ends the episode
-        reset_target=False,      # irrelevant when not continuing; fixed anyway
+        continuing_task=True,    # reaching the goal does not end the episode
+        reset_target=False,      # and does not move the goal
         max_episode_steps=max_episode_steps,
     )
     inner = env.unwrapped
