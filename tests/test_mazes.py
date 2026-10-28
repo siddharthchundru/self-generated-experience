@@ -14,7 +14,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from envs.mazes import (  # noqa: E402
-    M1, M2, DEMO_COLS, NORTH_ARM, SOUTH_ARM, M1_DEMO_REGION, M1_HELD_OUT_REGION,
+    M0, M1, M2, DEMO_COLS, NORTH_ARM, SOUTH_ARM, M1_DEMO_REGION, M1_HELD_OUT_REGION,
+    M0_DEMO_REGION, M0_HELD_OUT_REGION, M0_NORTH_ARM, M0_SOUTH_ARM,
     free_cells, shortest_path, cycle_rank, route_class,
 )
 
@@ -67,6 +68,47 @@ class TestM1Pinned(unittest.TestCase):
                     (6, 9), (6, 10), (6, 11), (6, 12), (7, 9)}
         self.assertEqual(set(M1_HELD_OUT_REGION), expected)
         self.assertEqual(len(M1_DEMO_REGION), 24)
+
+
+class TestM0(unittest.TestCase):
+    """The tuning maze has M1's two-route structure with a different shape."""
+
+    def route_lengths(self, row):
+        north = shortest_path(M0, (row, 1), (row, 9), blocked=M0_SOUTH_ARM)
+        south = shortest_path(M0, (row, 1), (row, 9), blocked=M0_NORTH_ARM)
+        return len(north) - 1, len(south) - 1
+
+    def test_exactly_one_loop(self):
+        self.assertEqual(cycle_rank(set(M0_DEMO_REGION)), 1)
+        self.assertEqual(cycle_rank(free_cells(M0)), 1)  # held-out region adds no loops
+
+    def test_which_route_is_shorter_depends_on_the_row(self):
+        # (north, south) lengths in cells; row 3 is the tie.
+        expected = {1: (8, 16), 2: (10, 14), 3: (12, 12), 4: (14, 10), 5: (16, 8)}
+        for row, lengths in expected.items():
+            self.assertEqual(self.route_lengths(row), lengths)
+
+    def test_geometry_differs_from_m1(self):
+        # Not a copy or flip of M1: different shape and different route gaps.
+        self.assertNotEqual((len(M0), len(M0[0])), (len(M1), len(M1[0])))
+        m1_gaps = {abs(len(shortest_path(M1, (r, 1), (r, 7), blocked=NORTH_ARM))
+                       - len(shortest_path(M1, (r, 1), (r, 7), blocked=SOUTH_ARM)))
+                   for r in range(1, 8)}
+        m0_gaps = {abs(a - b) for a, b in map(self.route_lengths, range(1, 6))}
+        self.assertNotEqual(m0_gaps, m1_gaps)
+
+    def test_regions(self):
+        self.assertEqual(len(M0_DEMO_REGION), 24)  # same size as M1's ring
+        expected = {(3, 10), (3, 11), (2, 11), (1, 11), (1, 12), (1, 13),
+                    (2, 13), (3, 13), (4, 13), (5, 13), (5, 12), (5, 11)}
+        self.assertEqual(set(M0_HELD_OUT_REGION), expected)
+        # Reached only through the corridor cell (3, 10).
+        self.assertIsNone(shortest_path(M0, (1, 1), (5, 11), blocked=frozenset({(3, 10)})))
+
+    def test_both_routes_survive_one_block(self):
+        for row in range(1, 6):
+            for arm in (M0_NORTH_ARM, M0_SOUTH_ARM):
+                self.assertIsNotNone(shortest_path(M0, (row, 1), (row, 9), blocked=arm))
 
 
 class TestM2(unittest.TestCase):

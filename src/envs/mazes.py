@@ -45,6 +45,27 @@ DEMO_COLS = range(1, 8)
 NORTH_ARM: frozenset[Cell] = frozenset((1, c) for c in range(2, 7))
 SOUTH_ARM: frozenset[Cell] = frozenset((7, c) for c in range(2, 7))
 
+# --- M0: tuning maze (custom) ---------------------------------------------------
+#
+#   Same two-route structure as M1 but a different shape, so that hyperparameters
+#   tuned here are not tuned on M1 (spec section 4; tuning in section 7). The ring
+#   is wide and flat (rows 1-5, cols 1-9) instead of square, so its route gaps
+#   differ: 8 extra cells for pairs on the arms (rows 1 and 5), 4 for rows 2 and
+#   4, and row 3 is a tie. Like M1 it has 24 ring cells and a corridor, from
+#   (3, 10), to a held-out region with no loops of its own.
+M0: list[list[int]] = [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+    [1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1],
+    [1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1],
+    [1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+]
+M0_DEMO_COLS = range(1, 10)
+M0_NORTH_ARM: frozenset[Cell] = frozenset((1, c) for c in range(2, 9))
+M0_SOUTH_ARM: frozenset[Cell] = frozenset((5, c) for c in range(2, 9))
+
 # --- M2: standard PointMaze Medium layout (unmodified; from Gymnasium-Robotics) ---
 M2: list[list[int]] = [
     [1, 1, 1, 1, 1, 1, 1, 1],
@@ -66,6 +87,8 @@ def free_cells(grid: list[list[int]]) -> set[Cell]:
 
 M1_DEMO_REGION: frozenset[Cell] = frozenset(c for c in free_cells(M1) if c[1] in DEMO_COLS)
 M1_HELD_OUT_REGION: frozenset[Cell] = frozenset(free_cells(M1)) - M1_DEMO_REGION
+M0_DEMO_REGION: frozenset[Cell] = frozenset(c for c in free_cells(M0) if c[1] in M0_DEMO_COLS)
+M0_HELD_OUT_REGION: frozenset[Cell] = frozenset(free_cells(M0)) - M0_DEMO_REGION
 
 
 def neighbours(cell: Cell, free: set[Cell]) -> list[Cell]:
