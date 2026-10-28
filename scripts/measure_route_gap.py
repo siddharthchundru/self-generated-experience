@@ -17,12 +17,16 @@ What it does:
 4. It also times plain environment stepping (random actions) and expert
    episodes, for the compute estimate.
 
-Writes results/stage1/route_gap.json and prints a summary.
+Writes results/stage1/route_gap.json and prints a summary. The file records
+the expert's controller gains and the git commit, because Δ depends on them
+(the audit found Δ between 15.5 and 26 under other reasonable gains). The gains
+are therefore frozen together with γ: changing the expert reopens Δ.
 """
 
 import json
 import math
 import platform
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -34,6 +38,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from envs.mazes import M1  # noqa: E402
 from envs.pointmaze import make_env  # noqa: E402
+import expert  # noqa: E402
 from expert import run_episode  # noqa: E402
 
 N_SEEDS = 50
@@ -91,7 +96,13 @@ def main():
     expert_sps = 100 * T / (time.perf_counter() - t0)
     env.close()
 
+    commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT,
+                            capture_output=True, text=True).stdout.strip()
+    dirty = bool(subprocess.run(["git", "status", "--porcelain", "src"], cwd=ROOT,
+                                capture_output=True, text=True).stdout.strip())
     result = {
+        "git_commit": commit + (" (src has uncommitted changes)" if dirty else ""),
+        "expert_gains": {"KP": expert.KP, "KD": expert.KD, "SWITCH_RADIUS": expert.SWITCH_RADIUS},
         "n_seeds_per_route": N_SEEDS,
         "pairs": pairs,
         "delta_steps": delta,
@@ -101,7 +112,7 @@ def main():
         "half_life_steps": round(half_life_steps, 1),
         "half_life_seconds": round(half_life_steps / 10, 2),
         "pilot_sensitivity_gammas": {str(s): round(gamma_for(s, delta), 5) for s in SENSITIVITY_SHARES},
-        "longest_expert_longer_route_steps": max(p["longer_steps_max"] for p in pairs),
+        "longest_expert_longer_route_actions": max(p["longer_steps_max"] for p in pairs),
         "throughput": {
             "machine": f"{platform.system()} {platform.machine()}, Python {platform.python_version()}",
             "single_process_env_steps_per_second_random_actions": round(random_sps),

@@ -1,4 +1,10 @@
 {
+  "git_commit": "d8bae8c4a724a51bf7b9351ff7e516b95cd215d0",
+  "expert_gains": {
+    "KP": 10.0,
+    "KD": 1.5,
+    "SWITCH_RADIUS": 0.4
+  },
   "n_seeds_per_route": 50,
   "pairs": [
     {
@@ -11,9 +17,9 @@
         7
       ],
       "shorter_route": "north",
-      "shorter_steps_median": 12.0,
-      "longer_steps_median": 37.0,
-      "longer_steps_max": 40,
+      "shorter_steps_median": 13.0,
+      "longer_steps_median": 38.0,
+      "longer_steps_max": 41,
       "gap_median": 25.0,
       "gap_min": 23,
       "gap_max": 28,
@@ -29,9 +35,9 @@
         7
       ],
       "shorter_route": "north",
-      "shorter_steps_median": 17.0,
-      "longer_steps_median": 34.0,
-      "longer_steps_max": 36,
+      "shorter_steps_median": 18.0,
+      "longer_steps_median": 35.0,
+      "longer_steps_max": 37,
       "gap_median": 16.0,
       "gap_min": 12,
       "gap_max": 20,
@@ -47,9 +53,9 @@
         7
       ],
       "shorter_route": "north",
-      "shorter_steps_median": 21.0,
-      "longer_steps_median": 30.0,
-      "longer_steps_max": 33,
+      "shorter_steps_median": 22.0,
+      "longer_steps_median": 31.0,
+      "longer_steps_max": 34,
       "gap_median": 8.0,
       "gap_min": 4,
       "gap_max": 11,
@@ -65,9 +71,9 @@
         7
       ],
       "shorter_route": "south",
-      "shorter_steps_median": 21.0,
-      "longer_steps_median": 30.0,
-      "longer_steps_max": 32,
+      "shorter_steps_median": 22.0,
+      "longer_steps_median": 31.0,
+      "longer_steps_max": 33,
       "gap_median": 8.0,
       "gap_min": 6,
       "gap_max": 11,
@@ -83,9 +89,9 @@
         7
       ],
       "shorter_route": "south",
-      "shorter_steps_median": 17.0,
-      "longer_steps_median": 34.0,
-      "longer_steps_max": 36,
+      "shorter_steps_median": 18.0,
+      "longer_steps_median": 35.0,
+      "longer_steps_max": 37,
       "gap_median": 16.0,
       "gap_min": 13,
       "gap_max": 19,
@@ -101,9 +107,9 @@
         7
       ],
       "shorter_route": "south",
-      "shorter_steps_median": 12.0,
-      "longer_steps_median": 37.0,
-      "longer_steps_max": 40,
+      "shorter_steps_median": 13.0,
+      "longer_steps_median": 38.0,
+      "longer_steps_max": 41,
       "gap_median": 26.0,
       "gap_min": 23,
       "gap_max": 29,
@@ -120,10 +126,10 @@
     "0.58": 0.98003,
     "0.72": 0.94268
   },
-  "longest_expert_longer_route_steps": 40,
+  "longest_expert_longer_route_actions": 41,
   "throughput": {
     "machine": "Linux x86_64, Python 3.13.18",
-    "single_process_env_steps_per_second_random_actions": 2635,
-    "single_process_env_steps_per_second_expert": 2161
+    "single_process_env_steps_per_second_random_actions": 2629,
+    "single_process_env_steps_per_second_expert": 2837
   }
 }
