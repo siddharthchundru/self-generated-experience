@@ -68,7 +68,7 @@ button[aria-pressed="true"] { background: var(--chosen); color: var(--chosen-ink
   <h1>Route hand-check: 60 trajectories on M1</h1>
   <div class="intro">
     <p>Each card shows one simulated rollout on a west–east pair of the ring. The ball starts on the west side and its goal is on the east side. For each, pick the route the ball took to get across to the goal side: the <strong>north</strong> arm, the <strong>south</strong> arm, or <strong>didn't get across</strong>.</p>
-    <p>Judge by eye, the way you would describe the rollout to someone. Some balls wander into one arm and turn back; tick <em>unsure</em> on any you can't call. The classifier's answers are hidden. When you're done, copy the answer line at the bottom and paste it into the chat.</p>
+    <p>The dashed vertical marker is the midpoint: passing from one side of it to the other in the top corridor counts as North, or in the bottom corridor as South. You do not have to reach the right-hand wall or the goal. Touching the marker and turning back does not count. If there are several crossings, use the last one. Some balls wander into one arm and turn back; tick <em>unsure</em> on any you can't call. The classifier's answers are hidden. When you're done, copy the answer line at the bottom and paste it into the chat.</p>
   </div>
   <div class="legend">
     <span><span class="dot" style="background:var(--start)"></span>start</span>
@@ -110,6 +110,11 @@ function drawMaze(item) {
   svg.appendChild(el("rect", { x: 0, y: 0, width: COLS, height: ROWS, fill: "var(--floor)" }));
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++)
     if (GRID[r][c] === 1) svg.appendChild(el("rect", { x: c, y: r, width: 1.01, height: 1.01, fill: "var(--wall)" }));
+  svg.appendChild(el("line", { x1: 4.5, y1: 0.8, x2: 4.5, y2: 8.2,
+    stroke: "#b7791f", "stroke-width": 0.06, "stroke-dasharray": "0.18 0.14", opacity: 0.85 }));
+  const midpoint = el("text", { x: 4.7, y: 0.65, fill: "var(--ink)", "font-size": 0.34 });
+  midpoint.textContent = "midpoint";
+  svg.appendChild(midpoint);
   const pts = item.positions, early = css("--path-early"), late = css("--path-late");
   for (let i = 0; i < pts.length - 1; i++) {
     svg.appendChild(el("line", { x1: sx(pts[i][0]), y1: sy(pts[i][1]), x2: sx(pts[i + 1][0]), y2: sy(pts[i + 1][1]),
