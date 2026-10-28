@@ -2,17 +2,17 @@
 
 Goal selection, behavioural repertoire and recovery in self-improving policies.
 
-> **Status: Stage 1 (harness) in progress.**
-> - Done: the literature check; the mazes with automated planner checks; integration with the MuJoCo PointMaze simulator at the specified 10 Hz, with guards against goal leakage. The integration went through three independent audits ([`notes/audits/`](notes/audits/)).
-> - Next: the scripted expert, the evaluation suite, the route classifier and the determinism test.
-> - No experiments have been run and no results are reported. The plan is fixed in a pre-registration before the main runs.
+> **Status: Stage 1 (harness) nearly complete.** This repository is a tested experimental apparatus. No learning experiments have been run, and the competence–repertoire–recovery trade-off below is a hypothesis to be tested, not a finding.
+> - Done: the literature check; the mazes with planner checks; the MuJoCo PointMaze simulator at 10 Hz with fixed-length episodes and guards against goal leakage; a scripted expert that drives either route on every two-route pair; the route-block perturbation; the measured route-length gap that fixes the learner's discount (γ = 0.962). Each piece was reviewed by an independent audit ([`notes/audits/`](notes/audits/)).
+> - In review: the route classifier for simulated rollouts, its hand-check, and the tuning maze M0.
+> - Next: the evaluation suite, then the learner. The plan is fixed in a pre-registration before the main runs.
 
 ## Question
 
 A goal-conditioned agent starts from a few demonstrations that cover only part of its world, then improves through a fixed budget of its own practice. With the learner, the demonstrations and the budget held fixed, how does **the choice of what to practise** affect:
 
 1. **competence** on the tasks it was shown,
-2. its **behavioural repertoire**, meaning the number of distinct ways it can solve the same task, and
+2. its **behavioural repertoire**, meaning the distinct ways it can solve the same task, and
 3. its **recovery** when the solution it relies on is blocked?
 
 ## Why this matters
@@ -24,7 +24,7 @@ The published fixes for mode collapse add an explicit diversity objective. This 
 ## What this tests that prior work has not
 
 - **Implicit vs explicit diversity.** Does practising self-chosen frontier goals ([MEGA](https://arxiv.org/abs/2007.02832)) preserve repertoire, with the learner and its objective unchanged?
-- **Repertoire → recovery, tested directly.** Does a preserved repertoire actually buy recovery after a route is blocked?
+- **Repertoire → recovery, inside one policy.** A repertoire that can be *selected from* is known to aid recovery ([Cully et al., 2015](https://arxiv.org/abs/1407.3501); [Li et al., 2024](https://arxiv.org/abs/2406.00681)). Does a repertoire held inside one goal-conditioned policy, with no mechanism for selecting a mode, speed recovery when the route it relies on is blocked?
 - **Data vs loop.** A re-learning control trains a fresh learner on each condition's final data, to locate where any advantage lives ([Ostrovski et al., 2021](https://arxiv.org/abs/2110.14020)).
 
 This is a controlled empirical study, not a new method. The claim of novelty rests on a first-pass literature check, in [`notes/stage0-literature-gate.md`](notes/stage0-literature-gate.md).
@@ -35,17 +35,17 @@ This is a controlled empirical study, not a new method. The claim of novelty res
 | --- | --- |
 | Environment | [Gymnasium-Robotics PointMaze](https://robotics.farama.org/envs/maze/point_maze/). The primary maze, M1, is a ring around a central wall: west–east pairs have exactly two routes, and which is shorter depends on the row. A corridor leads to a held-out region that demonstrations never visit. |
 | Demonstrations | Scripted-expert trajectories inside the demonstration region, split equally between the two routes |
-| Learner | Goal-conditioned supervised learning ([GCSL](https://arxiv.org/abs/1912.06088)), identical in every condition |
+| Learner | Goal-conditioned supervised learning ([GCSL](https://arxiv.org/abs/1912.06088)) with the discounted relabelling weight from [weighted GCSL](https://arxiv.org/abs/2202.04478), identical in every condition. The weight makes the learner prefer shorter routes, as discounted reward does in RL fine-tuning; its strength γ is set by a rule from the maze's measured route lengths before any learning runs. Plain GCSL (no preference) is a secondary arm. |
 | Policy | MLP with a **categorical action head**. A single-Gaussian head averages the two routes into the wall and cannot represent a repertoire. |
 | Varies | Only which goal is pursued in each practice episode |
-| Held fixed | Demonstrations, interaction budget, update schedule, gradient steps per environment step |
+| Held fixed | Demonstrations, network initialisation within a seed, interaction budget (whole episodes of fixed length), update schedule, gradient steps per environment step, buffer and sampling rules, evaluation pairs. Parity is of samples, not compute; wall-clock time is reported. |
 
 | Condition | What drives practice |
 | --- | --- |
 | C0 Demonstrations only | Nothing (matched gradient steps) |
 | C1 Expert top-up | More scripted-expert data within the budget |
 | C2 Random actions | Uniform random actions |
-| C3 Task self-practice | Goals sampled from the task distribution |
+| C3 Task self-practice | The demonstrated west–east pairs |
 | C4 Frontier novelty | Past achieved goals in the least-visited regions |
 
 Mixture, learning-progress and explicit-diversity conditions are planned for later stages.
@@ -55,15 +55,15 @@ Mixture, learning-progress and explicit-diversity conditions are planned for lat
 | Primary endpoint | Definition |
 | --- | --- |
 | Competence (S_in) | Success on fixed start–goal pairs in the demonstration region |
-| Repertoire (Rep) | Mean, over two-route pairs, of the number of routes (0–2) that each account for at least 10% of successful sampled rollouts |
-| Recovery (A_k) | Success after the agent's own most-used route is blocked, following a common adaptation procedure |
+| Repertoire (Rep) | Minority-route share: of a pair's successful sampled rollouts (100 per pair), the fraction taking the less-used route (0–0.5), averaged over pairs with at least 20 successes. Always read alongside competence and success counts. |
+| Recovery (A_k) | Success after the shorter route is blocked, following a common adaptation procedure |
 
-Secondary measures: held-out success, zero-shot recovery, mode-weighted success, data coverage, path efficiency and robustness.
+Secondary measures include the minority-route success rate (which separates a competent two-route policy from a barely competent one), zero-shot and best-of-m recovery, per-route quality, held-out success, data coverage, path efficiency and robustness.
 
 **Analysis.**
 - Hypotheses, endpoints and the analysis code will be pre-registered on OSF before the main runs.
 - Paired seeds; seed count set by a pilot power analysis.
-- Paired C4 − C3 differences with bootstrap 95% confidence intervals; paired permutation tests, Holm-corrected across the three primary endpoints; equivalence tests for null results.
+- Paired C4 − C3 differences with bootstrap 95% confidence intervals (for Rep, on pairs where both conditions qualify); paired permutation tests, Holm-corrected across the three primary endpoints; equivalence tests for null results.
 - Every run is reported.
 
 The full design is in [`docs/spec.md`](docs/spec.md).
@@ -73,8 +73,11 @@ The full design is in [`docs/spec.md`](docs/spec.md).
 - [x] **Stage 0:** literature check
 - [ ] **Stage 1:** harness
   - [x] maze M1 with planner checks
-  - [x] simulator integration (audited)
-  - [ ] scripted expert, evaluation suite, route classifier, determinism test
+  - [x] simulator integration and fixed-length episodes (audited)
+  - [x] determinism test
+  - [x] scripted expert, route-block perturbation, route-length gap and γ (audited)
+  - [ ] route classifier with hand-check, tuning maze M0 (in review)
+  - [ ] evaluation suite
 - [ ] **Stage 2:** learner, conditions, pilot, frozen pre-registration, main runs, re-learning control, report
 - [ ] **Stage 3:** second maze, second learner, further conditions and ablations
 - [ ] **Stage 4:** a goal-conditioned manipulation task with two solutions
@@ -86,7 +89,10 @@ Each stage ends in a gate that must pass before the next starts. Before a stage 
 ```
 src/envs/mazes.py        maze layouts and planner checks           (done)
 src/envs/pointmaze.py    PointMaze simulator on these mazes        (done)
-tests/                   tests for mazes and simulator             (done)
+src/expert.py            scripted expert (planner + PD controller) (done)
+scripts/                 Stage 1 measurements (route gap, γ)       (done)
+results/stage1/          measured route gap and γ                  (done)
+tests/                   tests for mazes, simulator and expert     (done)
 notes/                   literature check
 notes/audits/            independent audit reports
 docs/spec.md             full design specification
