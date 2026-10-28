@@ -1,0 +1,129 @@
+{
+  "n_seeds_per_route": 50,
+  "pairs": [
+    {
+      "start": [
+        1,
+        1
+      ],
+      "goal": [
+        1,
+        7
+      ],
+      "shorter_route": "north",
+      "shorter_steps_median": 12.0,
+      "longer_steps_median": 37.0,
+      "longer_steps_max": 40,
+      "gap_median": 25.0,
+      "gap_min": 23,
+      "gap_max": 28,
+      "predicted_shorter_share": 0.725
+    },
+    {
+      "start": [
+        2,
+        1
+      ],
+      "goal": [
+        2,
+        7
+      ],
+      "shorter_route": "north",
+      "shorter_steps_median": 17.0,
+      "longer_steps_median": 34.0,
+      "longer_steps_max": 36,
+      "gap_median": 16.0,
+      "gap_min": 12,
+      "gap_max": 20,
+      "predicted_shorter_share": 0.65
+    },
+    {
+      "start": [
+        3,
+        1
+      ],
+      "goal": [
+        3,
+        7
+      ],
+      "shorter_route": "north",
+      "shorter_steps_median": 21.0,
+      "longer_steps_median": 30.0,
+      "longer_steps_max": 33,
+      "gap_median": 8.0,
+      "gap_min": 4,
+      "gap_max": 11,
+      "predicted_shorter_share": 0.577
+    },
+    {
+      "start": [
+        5,
+        1
+      ],
+      "goal": [
+        5,
+        7
+      ],
+      "shorter_route": "south",
+      "shorter_steps_median": 21.0,
+      "longer_steps_median": 30.0,
+      "longer_steps_max": 32,
+      "gap_median": 8.0,
+      "gap_min": 6,
+      "gap_max": 11,
+      "predicted_shorter_share": 0.577
+    },
+    {
+      "start": [
+        6,
+        1
+      ],
+      "goal": [
+        6,
+        7
+      ],
+      "shorter_route": "south",
+      "shorter_steps_median": 17.0,
+      "longer_steps_median": 34.0,
+      "longer_steps_max": 36,
+      "gap_median": 16.0,
+      "gap_min": 13,
+      "gap_max": 19,
+      "predicted_shorter_share": 0.65
+    },
+    {
+      "start": [
+        7,
+        1
+      ],
+      "goal": [
+        7,
+        7
+      ],
+      "shorter_route": "south",
+      "shorter_steps_median": 12.0,
+      "longer_steps_median": 37.0,
+      "longer_steps_max": 40,
+      "gap_median": 26.0,
+      "gap_min": 23,
+      "gap_max": 29,
+      "predicted_shorter_share": 0.732
+    }
+  ],
+  "delta_steps": 16.0,
+  "delta_seconds": 1.6,
+  "target_shorter_share": 0.65,
+  "gamma": 0.96205,
+  "half_life_steps": 17.9,
+  "half_life_seconds": 1.79,
+  "pilot_sensitivity_gammas": {
+    "0.58": 0.98003,
+    "0.72": 0.94268
+  },
+  "longest_expert_longer_route_steps": 40,
+  "throughput": {
+    "machine": "Linux x86_64, Python 3.13.18",
+    "single_process_env_steps_per_second_random_actions": 2635,
+    "single_process_env_steps_per_second_expert": 2161
+  }
+}
