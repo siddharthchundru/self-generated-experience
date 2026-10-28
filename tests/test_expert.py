@@ -16,6 +16,11 @@ What they establish:
    section 7) needs plentiful whole-maze expert data, held-out region included.
 4. Asking for a route that cannot exist raises an error instead of silently
    driving a different route.
+5. Demonstrations on M1's ring pairs never enter the held-out region, so goals
+   relabelled from their states cannot leak into it.
+6. The episode's `success` is the final step only: a ball that reaches the goal
+   and is then pushed away counts as a failure. The expert ends close to the
+   exact (noisy) goal, not merely inside its cell.
 
 These run the simulator, so they take about a minute.
 """
@@ -26,7 +31,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from envs.mazes import M1, M2, free_cells, route_class  # noqa: E402
+import numpy as np  # noqa: E402
+
+from envs.mazes import M1, M1_DEMO_REGION, M2, free_cells, route_class  # noqa: E402
 from envs.pointmaze import make_env, xy_to_cell  # noqa: E402
 from expert import plan_cells, run_episode  # noqa: E402
 
@@ -50,7 +57,38 @@ class TestBothRoutesOnM1(unittest.TestCase):
                         self.assertTrue(ep["success"])
                         self.assertEqual(len(ep["actions"]), T)  # fixed length
                         self.assertEqual(driven_route(M1, ep["observations"]), route)
+                        visited = {xy_to_cell(M1, o[:2]) for o in ep["observations"]}
+                        self.assertLessEqual(visited, M1_DEMO_REGION)
+                        final_distance = np.linalg.norm(ep["observations"][-1][:2] - ep["goal"])
+                        self.assertLess(final_distance, 0.2)
         env.close()
+
+
+class TestSuccessIsJudgedAtTheFinalStep(unittest.TestCase):
+    def test_reach_then_leave_is_a_failure(self):
+        # Wrap the env so that, after the expert has held the goal for a while,
+        # its actions are replaced by a full push away from the goal.
+        import expert as expert_module
+
+        class PushAwayLate:
+            def __init__(self, env, after):
+                self.env, self.after, self.t = env, after, 0
+
+            def reset(self, **kw):
+                self.t = 0
+                return self.env.reset(**kw)
+
+            def step(self, action):
+                self.t += 1
+                if self.t > self.after:
+                    action = np.array([-1.0, 0.0], dtype=np.float32)  # west, away from (1, 7)
+                return self.env.step(action)
+
+        env = make_env("M1", max_episode_steps=T)
+        ep = expert_module.run_episode(PushAwayLate(env, 40), M1, (1, 1), (1, 7), "north", seed=0)
+        env.close()
+        self.assertIsNotNone(ep["first_success_step"])  # it did reach the goal ...
+        self.assertFalse(ep["success"])                  # ... but was not there at the end
 
 
 class TestP1Block(unittest.TestCase):

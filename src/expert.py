@@ -86,8 +86,9 @@ def run_episode(env, grid, start, goal, route="shortest", blocked=frozenset(), s
     """Run one fixed-length expert episode on `env`.
 
     Returns a dict with the observations (T+1 x 4), actions (T x 2), the goal
-    position, `success` (within the goal radius at the final step) and
-    `first_success_step` (first step within the radius, or None).
+    position, `success` (within the goal radius at the final step, as reported
+    by the environment on the last step) and `first_success_step` (the number of
+    actions taken when the ball was first within the radius, or None).
     """
     obs, _ = env.reset(seed=seed, options={"reset_cell": list(start), "goal_cell": list(goal)})
     expert = ScriptedExpert(grid, start, goal, obs["desired_goal"], route, blocked)
@@ -100,7 +101,7 @@ def run_episode(env, grid, start, goal, route="shortest", blocked=frozenset(), s
         observations.append(obs["observation"].copy())
         actions.append(action)
         if info["success"] and first_success is None:
-            first_success = t
+            first_success = t + 1  # actions taken so far
         done = terminated or truncated
         t += 1
     return {
