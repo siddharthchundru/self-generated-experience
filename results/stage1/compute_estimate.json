@@ -1,0 +1,1117 @@
+{
+  "status": "planning_scenarios_not_a_frozen_compute_cap",
+  "assumptions": {
+    "horizon": 100,
+    "updates_per_env_step": 1.0,
+    "warmup_updates": 10000,
+    "demo_episodes": 140,
+    "include_expert_topup": true,
+    "pilot_seeds": 6,
+    "pilot_relearning": false,
+    "adaptation_fraction": 0.1,
+    "sampled_rollouts": 100,
+    "greedy_rollouts": 20,
+    "main_evaluation_checkpoints": 1,
+    "tuning_trials_per_condition": 6,
+    "tuning_seeds": 3,
+    "tuning_budget": 100000,
+    "capacity_updates_per_learner_maze": 100000,
+    "capacity_demo_episodes": 1840,
+    "capacity_eval_episodes_per_learner_maze": 200
+  },
+  "measurement_file": "results/stage1/mac_throughput.json",
+  "benchmark_batch_size": 256,
+  "scenarios": [
+    {
+      "budget_N": 100000,
+      "main_seeds": 6,
+      "main_conditions": 7,
+      "relearning_conditions": 5,
+      "adaptation_k_per_run": 10000,
+      "assumptions": {
+        "horizon": 100,
+        "updates_per_env_step": 1.0,
+        "warmup_updates": 10000,
+        "demo_episodes": 140,
+        "include_expert_topup": true,
+        "pilot_seeds": 6,
+        "pilot_relearning": false,
+        "adaptation_fraction": 0.1,
+        "sampled_rollouts": 100,
+        "greedy_rollouts": 20,
+        "main_evaluation_checkpoints": 1,
+        "tuning_trials_per_condition": 6,
+        "tuning_seeds": 3,
+        "tuning_budget": 100000,
+        "capacity_updates_per_learner_maze": 100000,
+        "capacity_demo_episodes": 1840,
+        "capacity_eval_episodes_per_learner_maze": 200
+      },
+      "components": [
+        {
+          "name": "main: D0",
+          "random_dynamics_steps": 0,
+          "expert_steps": 84000,
+          "gradient_updates": 0,
+          "network_inferences": 0,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: shared weighted/plain pretraining",
+          "random_dynamics_steps": 1008000,
+          "expert_steps": 0,
+          "gradient_updates": 120000,
+          "network_inferences": 1008000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: main practice",
+          "random_dynamics_steps": 3000000,
+          "expert_steps": 600000,
+          "gradient_updates": 4200000.0,
+          "network_inferences": 2400000,
+          "frontier_selections": 12000.0
+        },
+        {
+          "name": "main: final/checkpoint evaluation",
+          "random_dynamics_steps": 7056000,
+          "expert_steps": 0,
+          "gradient_updates": 0,
+          "network_inferences": 7056000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: P1 and P1-own adaptation",
+          "random_dynamics_steps": 840000,
+          "expert_steps": 0,
+          "gradient_updates": 840000.0,
+          "network_inferences": 840000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: fresh-buffer re-learning",
+          "random_dynamics_steps": 2520000,
+          "expert_steps": 0,
+          "gradient_updates": 3300000.0,
+          "network_inferences": 2520000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: D0",
+          "random_dynamics_steps": 0,
+          "expert_steps": 84000,
+          "gradient_updates": 0,
+          "network_inferences": 0,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: shared weighted/plain pretraining",
+          "random_dynamics_steps": 1008000,
+          "expert_steps": 0,
+          "gradient_updates": 120000,
+          "network_inferences": 1008000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: main practice",
+          "random_dynamics_steps": 3000000,
+          "expert_steps": 600000,
+          "gradient_updates": 4200000.0,
+          "network_inferences": 2400000,
+          "frontier_selections": 12000.0
+        },
+        {
+          "name": "pilot: final/checkpoint evaluation",
+          "random_dynamics_steps": 7056000,
+          "expert_steps": 0,
+          "gradient_updates": 0,
+          "network_inferences": 7056000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: P1 and P1-own adaptation",
+          "random_dynamics_steps": 840000,
+          "expert_steps": 0,
+          "gradient_updates": 840000.0,
+          "network_inferences": 840000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: gamma sensitivity",
+          "random_dynamics_steps": 4416000,
+          "expert_steps": 0,
+          "gradient_updates": 2520000.0,
+          "network_inferences": 4416000,
+          "frontier_selections": 12000.0
+        },
+        {
+          "name": "pilot: additional C0 P1 k-grid calibration",
+          "random_dynamics_steps": 426000,
+          "expert_steps": 0,
+          "gradient_updates": 210000.0,
+          "network_inferences": 426000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "M0: equal C3/C4 tuning",
+          "random_dynamics_steps": 5760000,
+          "expert_steps": 252000,
+          "gradient_updates": 3780000.0,
+          "network_inferences": 5760000,
+          "frontier_selections": 18000.0
+        },
+        {
+          "name": "capacity: weighted/plain on M1/M2",
+          "random_dynamics_steps": 80000,
+          "expert_steps": 184000,
+          "gradient_updates": 400000,
+          "network_inferences": 80000,
+          "frontier_selections": 0
+        }
+      ],
+      "totals": {
+        "random_dynamics_steps": 37010000,
+        "expert_steps": 1804000,
+        "gradient_updates": 20530000.0,
+        "network_inferences": 35810000,
+        "frontier_selections": 54000.0,
+        "environment_steps": 38814000
+      },
+      "median_rates": {
+        "seconds_by_operation": {
+          "random_dynamics_steps": 4230.377701524732,
+          "expert_steps": 209.0472944991314,
+          "gradient_updates": 10038.873478686824,
+          "network_inferences": 990.785099636705,
+          "frontier_selections": 691.444236645475
+        },
+        "hours_before_overhead": 4.489035503053574,
+        "hours_with_25_percent_overhead": 5.611294378816968,
+        "hours_with_100_percent_overhead": 8.978071006107148
+      },
+      "slowest_rates": {
+        "seconds_by_operation": {
+          "random_dynamics_steps": 4301.880327606748,
+          "expert_steps": 212.89899605099345,
+          "gradient_updates": 10041.74480069778,
+          "network_inferences": 991.2439328251639,
+          "frontier_selections": 703.5859124211129
+        },
+        "hours_before_overhead": 4.514264991556055,
+        "hours_with_25_percent_overhead": 5.642831239445068,
+        "hours_with_100_percent_overhead": 9.02852998311211
+      }
+    },
+    {
+      "budget_N": 100000,
+      "main_seeds": 20,
+      "main_conditions": 7,
+      "relearning_conditions": 5,
+      "adaptation_k_per_run": 10000,
+      "assumptions": {
+        "horizon": 100,
+        "updates_per_env_step": 1.0,
+        "warmup_updates": 10000,
+        "demo_episodes": 140,
+        "include_expert_topup": true,
+        "pilot_seeds": 6,
+        "pilot_relearning": false,
+        "adaptation_fraction": 0.1,
+        "sampled_rollouts": 100,
+        "greedy_rollouts": 20,
+        "main_evaluation_checkpoints": 1,
+        "tuning_trials_per_condition": 6,
+        "tuning_seeds": 3,
+        "tuning_budget": 100000,
+        "capacity_updates_per_learner_maze": 100000,
+        "capacity_demo_episodes": 1840,
+        "capacity_eval_episodes_per_learner_maze": 200
+      },
+      "components": [
+        {
+          "name": "main: D0",
+          "random_dynamics_steps": 0,
+          "expert_steps": 280000,
+          "gradient_updates": 0,
+          "network_inferences": 0,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: shared weighted/plain pretraining",
+          "random_dynamics_steps": 3360000,
+          "expert_steps": 0,
+          "gradient_updates": 400000,
+          "network_inferences": 3360000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: main practice",
+          "random_dynamics_steps": 10000000,
+          "expert_steps": 2000000,
+          "gradient_updates": 14000000.0,
+          "network_inferences": 8000000,
+          "frontier_selections": 40000.0
+        },
+        {
+          "name": "main: final/checkpoint evaluation",
+          "random_dynamics_steps": 23520000,
+          "expert_steps": 0,
+          "gradient_updates": 0,
+          "network_inferences": 23520000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: P1 and P1-own adaptation",
+          "random_dynamics_steps": 2800000,
+          "expert_steps": 0,
+          "gradient_updates": 2800000.0,
+          "network_inferences": 2800000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: fresh-buffer re-learning",
+          "random_dynamics_steps": 8400000,
+          "expert_steps": 0,
+          "gradient_updates": 11000000.0,
+          "network_inferences": 8400000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: D0",
+          "random_dynamics_steps": 0,
+          "expert_steps": 84000,
+          "gradient_updates": 0,
+          "network_inferences": 0,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: shared weighted/plain pretraining",
+          "random_dynamics_steps": 1008000,
+          "expert_steps": 0,
+          "gradient_updates": 120000,
+          "network_inferences": 1008000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: main practice",
+          "random_dynamics_steps": 3000000,
+          "expert_steps": 600000,
+          "gradient_updates": 4200000.0,
+          "network_inferences": 2400000,
+          "frontier_selections": 12000.0
+        },
+        {
+          "name": "pilot: final/checkpoint evaluation",
+          "random_dynamics_steps": 7056000,
+          "expert_steps": 0,
+          "gradient_updates": 0,
+          "network_inferences": 7056000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: P1 and P1-own adaptation",
+          "random_dynamics_steps": 840000,
+          "expert_steps": 0,
+          "gradient_updates": 840000.0,
+          "network_inferences": 840000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: gamma sensitivity",
+          "random_dynamics_steps": 4416000,
+          "expert_steps": 0,
+          "gradient_updates": 2520000.0,
+          "network_inferences": 4416000,
+          "frontier_selections": 12000.0
+        },
+        {
+          "name": "pilot: additional C0 P1 k-grid calibration",
+          "random_dynamics_steps": 426000,
+          "expert_steps": 0,
+          "gradient_updates": 210000.0,
+          "network_inferences": 426000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "M0: equal C3/C4 tuning",
+          "random_dynamics_steps": 5760000,
+          "expert_steps": 252000,
+          "gradient_updates": 3780000.0,
+          "network_inferences": 5760000,
+          "frontier_selections": 18000.0
+        },
+        {
+          "name": "capacity: weighted/plain on M1/M2",
+          "random_dynamics_steps": 80000,
+          "expert_steps": 184000,
+          "gradient_updates": 400000,
+          "network_inferences": 80000,
+          "frontier_selections": 0
+        }
+      ],
+      "totals": {
+        "random_dynamics_steps": 70666000,
+        "expert_steps": 3400000,
+        "gradient_updates": 40270000.0,
+        "network_inferences": 68066000,
+        "frontier_selections": 82000.0,
+        "environment_steps": 74066000
+      },
+      "median_rates": {
+        "seconds_by_operation": {
+          "random_dynamics_steps": 8077.380995837523,
+          "expert_steps": 393.9915749983629,
+          "gradient_updates": 19691.448367594665,
+          "network_inferences": 1883.2387208006692,
+          "frontier_selections": 1049.9708778690547
+        },
+        "hours_before_overhead": 8.637786260305631,
+        "hours_with_25_percent_overhead": 10.79723282538204,
+        "hours_with_100_percent_overhead": 17.275572520611263
+      },
+      "slowest_rates": {
+        "seconds_by_operation": {
+          "random_dynamics_steps": 8213.906382887286,
+          "expert_steps": 401.2508794752648,
+          "gradient_updates": 19697.080522362376,
+          "network_inferences": 1884.1108498094836,
+          "frontier_selections": 1068.4082373802084
+        },
+        "hours_before_overhead": 8.684654686642949,
+        "hours_with_25_percent_overhead": 10.855818358303686,
+        "hours_with_100_percent_overhead": 17.369309373285898
+      }
+    },
+    {
+      "budget_N": 1000000,
+      "main_seeds": 6,
+      "main_conditions": 7,
+      "relearning_conditions": 5,
+      "adaptation_k_per_run": 100000,
+      "assumptions": {
+        "horizon": 100,
+        "updates_per_env_step": 1.0,
+        "warmup_updates": 10000,
+        "demo_episodes": 140,
+        "include_expert_topup": true,
+        "pilot_seeds": 6,
+        "pilot_relearning": false,
+        "adaptation_fraction": 0.1,
+        "sampled_rollouts": 100,
+        "greedy_rollouts": 20,
+        "main_evaluation_checkpoints": 1,
+        "tuning_trials_per_condition": 6,
+        "tuning_seeds": 3,
+        "tuning_budget": 100000,
+        "capacity_updates_per_learner_maze": 100000,
+        "capacity_demo_episodes": 1840,
+        "capacity_eval_episodes_per_learner_maze": 200
+      },
+      "components": [
+        {
+          "name": "main: D0",
+          "random_dynamics_steps": 0,
+          "expert_steps": 84000,
+          "gradient_updates": 0,
+          "network_inferences": 0,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: shared weighted/plain pretraining",
+          "random_dynamics_steps": 1008000,
+          "expert_steps": 0,
+          "gradient_updates": 120000,
+          "network_inferences": 1008000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: main practice",
+          "random_dynamics_steps": 30000000,
+          "expert_steps": 6000000,
+          "gradient_updates": 42000000.0,
+          "network_inferences": 24000000,
+          "frontier_selections": 120000.0
+        },
+        {
+          "name": "main: final/checkpoint evaluation",
+          "random_dynamics_steps": 7056000,
+          "expert_steps": 0,
+          "gradient_updates": 0,
+          "network_inferences": 7056000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: P1 and P1-own adaptation",
+          "random_dynamics_steps": 8400000,
+          "expert_steps": 0,
+          "gradient_updates": 8400000.0,
+          "network_inferences": 8400000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: fresh-buffer re-learning",
+          "random_dynamics_steps": 2520000,
+          "expert_steps": 0,
+          "gradient_updates": 30300000.0,
+          "network_inferences": 2520000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: D0",
+          "random_dynamics_steps": 0,
+          "expert_steps": 84000,
+          "gradient_updates": 0,
+          "network_inferences": 0,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: shared weighted/plain pretraining",
+          "random_dynamics_steps": 1008000,
+          "expert_steps": 0,
+          "gradient_updates": 120000,
+          "network_inferences": 1008000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: main practice",
+          "random_dynamics_steps": 30000000,
+          "expert_steps": 6000000,
+          "gradient_updates": 42000000.0,
+          "network_inferences": 24000000,
+          "frontier_selections": 120000.0
+        },
+        {
+          "name": "pilot: final/checkpoint evaluation",
+          "random_dynamics_steps": 7056000,
+          "expert_steps": 0,
+          "gradient_updates": 0,
+          "network_inferences": 7056000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: P1 and P1-own adaptation",
+          "random_dynamics_steps": 8400000,
+          "expert_steps": 0,
+          "gradient_updates": 8400000.0,
+          "network_inferences": 8400000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: gamma sensitivity",
+          "random_dynamics_steps": 26016000,
+          "expert_steps": 0,
+          "gradient_updates": 24120000.0,
+          "network_inferences": 26016000,
+          "frontier_selections": 120000.0
+        },
+        {
+          "name": "pilot: additional C0 P1 k-grid calibration",
+          "random_dynamics_steps": 2316000,
+          "expert_steps": 0,
+          "gradient_updates": 2100000.0,
+          "network_inferences": 2316000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "M0: equal C3/C4 tuning",
+          "random_dynamics_steps": 5760000,
+          "expert_steps": 252000,
+          "gradient_updates": 3780000.0,
+          "network_inferences": 5760000,
+          "frontier_selections": 18000.0
+        },
+        {
+          "name": "capacity: weighted/plain on M1/M2",
+          "random_dynamics_steps": 80000,
+          "expert_steps": 184000,
+          "gradient_updates": 400000,
+          "network_inferences": 80000,
+          "frontier_selections": 0
+        }
+      ],
+      "totals": {
+        "random_dynamics_steps": 129620000,
+        "expert_steps": 12604000,
+        "gradient_updates": 161740000.0,
+        "network_inferences": 117620000,
+        "frontier_selections": 378000.0,
+        "environment_steps": 142224000
+      },
+      "median_rates": {
+        "seconds_by_operation": {
+          "random_dynamics_steps": 14816.0377647024,
+          "expert_steps": 1460.5499444939312,
+          "gradient_updates": 79088.52393778895,
+          "network_inferences": 3254.290517153567,
+          "frontier_selections": 4840.109656518325
+        },
+        "hours_before_overhead": 28.738753283515884,
+        "hours_with_25_percent_overhead": 35.92344160439485,
+        "hours_with_100_percent_overhead": 57.47750656703177
+      },
+      "slowest_rates": {
+        "seconds_by_operation": {
+          "random_dynamics_steps": 15066.46117439575,
+          "expert_steps": 1487.460613207717,
+          "gradient_updates": 79111.14486433798,
+          "network_inferences": 3255.797581091756,
+          "frontier_selections": 4925.10138694779
+        },
+        "hours_before_overhead": 28.846101561105833,
+        "hours_with_25_percent_overhead": 36.05762695138229,
+        "hours_with_100_percent_overhead": 57.692203122211666
+      }
+    },
+    {
+      "budget_N": 1000000,
+      "main_seeds": 20,
+      "main_conditions": 7,
+      "relearning_conditions": 5,
+      "adaptation_k_per_run": 100000,
+      "assumptions": {
+        "horizon": 100,
+        "updates_per_env_step": 1.0,
+        "warmup_updates": 10000,
+        "demo_episodes": 140,
+        "include_expert_topup": true,
+        "pilot_seeds": 6,
+        "pilot_relearning": false,
+        "adaptation_fraction": 0.1,
+        "sampled_rollouts": 100,
+        "greedy_rollouts": 20,
+        "main_evaluation_checkpoints": 1,
+        "tuning_trials_per_condition": 6,
+        "tuning_seeds": 3,
+        "tuning_budget": 100000,
+        "capacity_updates_per_learner_maze": 100000,
+        "capacity_demo_episodes": 1840,
+        "capacity_eval_episodes_per_learner_maze": 200
+      },
+      "components": [
+        {
+          "name": "main: D0",
+          "random_dynamics_steps": 0,
+          "expert_steps": 280000,
+          "gradient_updates": 0,
+          "network_inferences": 0,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: shared weighted/plain pretraining",
+          "random_dynamics_steps": 3360000,
+          "expert_steps": 0,
+          "gradient_updates": 400000,
+          "network_inferences": 3360000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: main practice",
+          "random_dynamics_steps": 100000000,
+          "expert_steps": 20000000,
+          "gradient_updates": 140000000.0,
+          "network_inferences": 80000000,
+          "frontier_selections": 400000.0
+        },
+        {
+          "name": "main: final/checkpoint evaluation",
+          "random_dynamics_steps": 23520000,
+          "expert_steps": 0,
+          "gradient_updates": 0,
+          "network_inferences": 23520000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: P1 and P1-own adaptation",
+          "random_dynamics_steps": 28000000,
+          "expert_steps": 0,
+          "gradient_updates": 28000000.0,
+          "network_inferences": 28000000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: fresh-buffer re-learning",
+          "random_dynamics_steps": 8400000,
+          "expert_steps": 0,
+          "gradient_updates": 101000000.0,
+          "network_inferences": 8400000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: D0",
+          "random_dynamics_steps": 0,
+          "expert_steps": 84000,
+          "gradient_updates": 0,
+          "network_inferences": 0,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: shared weighted/plain pretraining",
+          "random_dynamics_steps": 1008000,
+          "expert_steps": 0,
+          "gradient_updates": 120000,
+          "network_inferences": 1008000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: main practice",
+          "random_dynamics_steps": 30000000,
+          "expert_steps": 6000000,
+          "gradient_updates": 42000000.0,
+          "network_inferences": 24000000,
+          "frontier_selections": 120000.0
+        },
+        {
+          "name": "pilot: final/checkpoint evaluation",
+          "random_dynamics_steps": 7056000,
+          "expert_steps": 0,
+          "gradient_updates": 0,
+          "network_inferences": 7056000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: P1 and P1-own adaptation",
+          "random_dynamics_steps": 8400000,
+          "expert_steps": 0,
+          "gradient_updates": 8400000.0,
+          "network_inferences": 8400000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: gamma sensitivity",
+          "random_dynamics_steps": 26016000,
+          "expert_steps": 0,
+          "gradient_updates": 24120000.0,
+          "network_inferences": 26016000,
+          "frontier_selections": 120000.0
+        },
+        {
+          "name": "pilot: additional C0 P1 k-grid calibration",
+          "random_dynamics_steps": 2316000,
+          "expert_steps": 0,
+          "gradient_updates": 2100000.0,
+          "network_inferences": 2316000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "M0: equal C3/C4 tuning",
+          "random_dynamics_steps": 5760000,
+          "expert_steps": 252000,
+          "gradient_updates": 3780000.0,
+          "network_inferences": 5760000,
+          "frontier_selections": 18000.0
+        },
+        {
+          "name": "capacity: weighted/plain on M1/M2",
+          "random_dynamics_steps": 80000,
+          "expert_steps": 184000,
+          "gradient_updates": 400000,
+          "network_inferences": 80000,
+          "frontier_selections": 0
+        }
+      ],
+      "totals": {
+        "random_dynamics_steps": 243916000,
+        "expert_steps": 26800000,
+        "gradient_updates": 350320000.0,
+        "network_inferences": 217916000,
+        "frontier_selections": 658000.0,
+        "environment_steps": 270716000
+      },
+      "median_rates": {
+        "seconds_by_operation": {
+          "random_dynamics_steps": 27880.48655620391,
+          "expert_steps": 3105.580649987096,
+          "gradient_updates": 171301.42021692978,
+          "network_inferences": 6029.263495460268,
+          "frontier_selections": 8425.376068754122
+        },
+        "hours_before_overhead": 60.206146385370886,
+        "hours_with_25_percent_overhead": 75.2576829817136,
+        "hours_with_100_percent_overhead": 120.41229277074177
+      },
+      "slowest_rates": {
+        "seconds_by_operation": {
+          "random_dynamics_steps": 28351.727694907528,
+          "expert_steps": 3162.801049981499,
+          "gradient_updates": 171350.41590747423,
+          "network_inferences": 6032.055651089875,
+          "frontier_selections": 8573.324636538746
+        },
+        "hours_before_overhead": 60.40842359444218,
+        "hours_with_25_percent_overhead": 75.51052949305273,
+        "hours_with_100_percent_overhead": 120.81684718888437
+      }
+    },
+    {
+      "budget_N": 5000000,
+      "main_seeds": 6,
+      "main_conditions": 7,
+      "relearning_conditions": 5,
+      "adaptation_k_per_run": 500000,
+      "assumptions": {
+        "horizon": 100,
+        "updates_per_env_step": 1.0,
+        "warmup_updates": 10000,
+        "demo_episodes": 140,
+        "include_expert_topup": true,
+        "pilot_seeds": 6,
+        "pilot_relearning": false,
+        "adaptation_fraction": 0.1,
+        "sampled_rollouts": 100,
+        "greedy_rollouts": 20,
+        "main_evaluation_checkpoints": 1,
+        "tuning_trials_per_condition": 6,
+        "tuning_seeds": 3,
+        "tuning_budget": 100000,
+        "capacity_updates_per_learner_maze": 100000,
+        "capacity_demo_episodes": 1840,
+        "capacity_eval_episodes_per_learner_maze": 200
+      },
+      "components": [
+        {
+          "name": "main: D0",
+          "random_dynamics_steps": 0,
+          "expert_steps": 84000,
+          "gradient_updates": 0,
+          "network_inferences": 0,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: shared weighted/plain pretraining",
+          "random_dynamics_steps": 1008000,
+          "expert_steps": 0,
+          "gradient_updates": 120000,
+          "network_inferences": 1008000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: main practice",
+          "random_dynamics_steps": 150000000,
+          "expert_steps": 30000000,
+          "gradient_updates": 210000000.0,
+          "network_inferences": 120000000,
+          "frontier_selections": 600000.0
+        },
+        {
+          "name": "main: final/checkpoint evaluation",
+          "random_dynamics_steps": 7056000,
+          "expert_steps": 0,
+          "gradient_updates": 0,
+          "network_inferences": 7056000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: P1 and P1-own adaptation",
+          "random_dynamics_steps": 42000000,
+          "expert_steps": 0,
+          "gradient_updates": 42000000.0,
+          "network_inferences": 42000000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: fresh-buffer re-learning",
+          "random_dynamics_steps": 2520000,
+          "expert_steps": 0,
+          "gradient_updates": 150300000.0,
+          "network_inferences": 2520000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: D0",
+          "random_dynamics_steps": 0,
+          "expert_steps": 84000,
+          "gradient_updates": 0,
+          "network_inferences": 0,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: shared weighted/plain pretraining",
+          "random_dynamics_steps": 1008000,
+          "expert_steps": 0,
+          "gradient_updates": 120000,
+          "network_inferences": 1008000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: main practice",
+          "random_dynamics_steps": 150000000,
+          "expert_steps": 30000000,
+          "gradient_updates": 210000000.0,
+          "network_inferences": 120000000,
+          "frontier_selections": 600000.0
+        },
+        {
+          "name": "pilot: final/checkpoint evaluation",
+          "random_dynamics_steps": 7056000,
+          "expert_steps": 0,
+          "gradient_updates": 0,
+          "network_inferences": 7056000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: P1 and P1-own adaptation",
+          "random_dynamics_steps": 42000000,
+          "expert_steps": 0,
+          "gradient_updates": 42000000.0,
+          "network_inferences": 42000000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: gamma sensitivity",
+          "random_dynamics_steps": 122016000,
+          "expert_steps": 0,
+          "gradient_updates": 120120000.0,
+          "network_inferences": 122016000,
+          "frontier_selections": 600000.0
+        },
+        {
+          "name": "pilot: additional C0 P1 k-grid calibration",
+          "random_dynamics_steps": 10716000,
+          "expert_steps": 0,
+          "gradient_updates": 10500000.0,
+          "network_inferences": 10716000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "M0: equal C3/C4 tuning",
+          "random_dynamics_steps": 5760000,
+          "expert_steps": 252000,
+          "gradient_updates": 3780000.0,
+          "network_inferences": 5760000,
+          "frontier_selections": 18000.0
+        },
+        {
+          "name": "capacity: weighted/plain on M1/M2",
+          "random_dynamics_steps": 80000,
+          "expert_steps": 184000,
+          "gradient_updates": 400000,
+          "network_inferences": 80000,
+          "frontier_selections": 0
+        }
+      ],
+      "totals": {
+        "random_dynamics_steps": 541220000,
+        "expert_steps": 60604000,
+        "gradient_updates": 789340000.0,
+        "network_inferences": 481220000,
+        "frontier_selections": 1818000.0,
+        "environment_steps": 601824000
+      },
+      "median_rates": {
+        "seconds_by_operation": {
+          "random_dynamics_steps": 61863.41582326981,
+          "expert_steps": 7022.78394447082,
+          "gradient_updates": 385975.8593115762,
+          "network_inferences": 13314.314595006288,
+          "frontier_selections": 23278.622633730993
+        },
+        "hours_before_overhead": 136.51527675223724,
+        "hours_with_25_percent_overhead": 170.64409594029655,
+        "hours_with_100_percent_overhead": 273.0305535044745
+      },
+      "slowest_rates": {
+        "seconds_by_operation": {
+          "random_dynamics_steps": 62909.0427156802,
+          "expert_steps": 7152.178911682044,
+          "gradient_updates": 386086.25625829445,
+          "network_inferences": 13320.48046227661,
+          "frontier_selections": 23687.392384844134
+        },
+        "hours_before_overhead": 136.98759742577153,
+        "hours_with_25_percent_overhead": 171.23449678221442,
+        "hours_with_100_percent_overhead": 273.97519485154305
+      }
+    },
+    {
+      "budget_N": 5000000,
+      "main_seeds": 20,
+      "main_conditions": 7,
+      "relearning_conditions": 5,
+      "adaptation_k_per_run": 500000,
+      "assumptions": {
+        "horizon": 100,
+        "updates_per_env_step": 1.0,
+        "warmup_updates": 10000,
+        "demo_episodes": 140,
+        "include_expert_topup": true,
+        "pilot_seeds": 6,
+        "pilot_relearning": false,
+        "adaptation_fraction": 0.1,
+        "sampled_rollouts": 100,
+        "greedy_rollouts": 20,
+        "main_evaluation_checkpoints": 1,
+        "tuning_trials_per_condition": 6,
+        "tuning_seeds": 3,
+        "tuning_budget": 100000,
+        "capacity_updates_per_learner_maze": 100000,
+        "capacity_demo_episodes": 1840,
+        "capacity_eval_episodes_per_learner_maze": 200
+      },
+      "components": [
+        {
+          "name": "main: D0",
+          "random_dynamics_steps": 0,
+          "expert_steps": 280000,
+          "gradient_updates": 0,
+          "network_inferences": 0,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: shared weighted/plain pretraining",
+          "random_dynamics_steps": 3360000,
+          "expert_steps": 0,
+          "gradient_updates": 400000,
+          "network_inferences": 3360000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: main practice",
+          "random_dynamics_steps": 500000000,
+          "expert_steps": 100000000,
+          "gradient_updates": 700000000.0,
+          "network_inferences": 400000000,
+          "frontier_selections": 2000000.0
+        },
+        {
+          "name": "main: final/checkpoint evaluation",
+          "random_dynamics_steps": 23520000,
+          "expert_steps": 0,
+          "gradient_updates": 0,
+          "network_inferences": 23520000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: P1 and P1-own adaptation",
+          "random_dynamics_steps": 140000000,
+          "expert_steps": 0,
+          "gradient_updates": 140000000.0,
+          "network_inferences": 140000000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "main: fresh-buffer re-learning",
+          "random_dynamics_steps": 8400000,
+          "expert_steps": 0,
+          "gradient_updates": 501000000.0,
+          "network_inferences": 8400000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: D0",
+          "random_dynamics_steps": 0,
+          "expert_steps": 84000,
+          "gradient_updates": 0,
+          "network_inferences": 0,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: shared weighted/plain pretraining",
+          "random_dynamics_steps": 1008000,
+          "expert_steps": 0,
+          "gradient_updates": 120000,
+          "network_inferences": 1008000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: main practice",
+          "random_dynamics_steps": 150000000,
+          "expert_steps": 30000000,
+          "gradient_updates": 210000000.0,
+          "network_inferences": 120000000,
+          "frontier_selections": 600000.0
+        },
+        {
+          "name": "pilot: final/checkpoint evaluation",
+          "random_dynamics_steps": 7056000,
+          "expert_steps": 0,
+          "gradient_updates": 0,
+          "network_inferences": 7056000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: P1 and P1-own adaptation",
+          "random_dynamics_steps": 42000000,
+          "expert_steps": 0,
+          "gradient_updates": 42000000.0,
+          "network_inferences": 42000000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "pilot: gamma sensitivity",
+          "random_dynamics_steps": 122016000,
+          "expert_steps": 0,
+          "gradient_updates": 120120000.0,
+          "network_inferences": 122016000,
+          "frontier_selections": 600000.0
+        },
+        {
+          "name": "pilot: additional C0 P1 k-grid calibration",
+          "random_dynamics_steps": 10716000,
+          "expert_steps": 0,
+          "gradient_updates": 10500000.0,
+          "network_inferences": 10716000,
+          "frontier_selections": 0
+        },
+        {
+          "name": "M0: equal C3/C4 tuning",
+          "random_dynamics_steps": 5760000,
+          "expert_steps": 252000,
+          "gradient_updates": 3780000.0,
+          "network_inferences": 5760000,
+          "frontier_selections": 18000.0
+        },
+        {
+          "name": "capacity: weighted/plain on M1/M2",
+          "random_dynamics_steps": 80000,
+          "expert_steps": 184000,
+          "gradient_updates": 400000,
+          "network_inferences": 80000,
+          "frontier_selections": 0
+        }
+      ],
+      "totals": {
+        "random_dynamics_steps": 1013916000,
+        "expert_steps": 130800000,
+        "gradient_updates": 1728320000.0,
+        "network_inferences": 883916000,
+        "frontier_selections": 3218000.0,
+        "environment_steps": 1144716000
+      },
+      "median_rates": {
+        "seconds_by_operation": {
+          "random_dynamics_steps": 115894.28904672117,
+          "expert_steps": 15157.08764993702,
+          "gradient_updates": 845123.5173250859,
+          "network_inferences": 24456.040271725153,
+          "frontier_selections": 41204.954694909975
+        },
+        "hours_before_overhead": 289.39885805232757,
+        "hours_with_25_percent_overhead": 361.74857256540946,
+        "hours_with_100_percent_overhead": 578.7977161046551
+      },
+      "slowest_rates": {
+        "seconds_by_operation": {
+          "random_dynamics_steps": 117853.15574833083,
+          "expert_steps": 15436.35736334254,
+          "gradient_updates": 845365.2398413047,
+          "network_inferences": 24467.365879002726,
+          "frontier_selections": 41928.50863279891
+        },
+        "hours_before_overhead": 290.2918409624388,
+        "hours_with_25_percent_overhead": 362.8648012030485,
+        "hours_with_100_percent_overhead": 580.5836819248776
+      }
+    }
+  ],
+  "limitations": [
+    "N, warmup, update ratio, tuning grid and evaluation frequency are explicit provisional assumptions.",
+    "Synthetic CPU training omits replay sampling, real learner integration, logging and checkpoint I/O.",
+    "KDE is a scoring surrogate, not the final C4 implementation.",
+    "Pilot repeats the same N; optional pilot re-learning is off unless requested in assumptions.",
+    "Each main policy has two adaptations; re-learned policies receive unblocked evaluation only (H4).",
+    "Gamma sensitivity gets unblocked evaluation only; the k grid is additional P1 calibration on C0.",
+    "M0 uses 140 balanced demo episodes as a conservative volume allowance, not a frozen D0 allocation.",
+    "Does not cover Stage 3 replication/extra learners, development/debug reruns, or manipulation.",
+    "No claimed statistical precision: 25% and 100% overhead are sensitivity scenarios."
+  ]
+}

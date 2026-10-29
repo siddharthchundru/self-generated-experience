@@ -1,0 +1,143 @@
+{
+  "machine": {
+    "system": "Darwin",
+    "release": "27.0.0",
+    "architecture": "arm64",
+    "python": "3.13.18",
+    "chip": "Apple M2 Pro",
+    "memory_bytes": "17179869184",
+    "physical_cores": "10",
+    "logical_cores": "10"
+  },
+  "git_commit": "536cb2d31d0c8f12d6c41274840e1872cd85bad2",
+  "source_sha256": {
+    "src/envs/mazes.py": "fcc37bb2e43987fae3a5ced351ce13295d31023e9a3bf7680c101970945e8891",
+    "src/envs/pointmaze.py": "404cef5db1a2bcac8306843094d59d65c7946f82c8c6d4f8bfd28a1f95ae6d4b",
+    "src/eval/__init__.py": "dfe7d1400ef9f7730af25e419a09a4474db74c0de448d0fde97b1433e9a33f67",
+    "src/eval/compute.py": "addf3cc4b5fd8b46c9fb7872584a150a4b5ae8a54a93fa177c61d619237adb58",
+    "src/eval/metrics.py": "a12e41769fadbaae3d2c0b11558f514ff8ef49f963e60b4a3cf744de76726859",
+    "src/eval/policies.py": "c8d8a60da4705f7e27bbbd9b51262ae629b6460aef7000def53a570d3779806c",
+    "src/eval/protocol.py": "2b603d921a4eadb5af016a24d2b166844dfbe8f4e691c011db32b6f77f36b418",
+    "src/eval/suite.py": "94d28ddc3dbf5304209a30fecbf36e9a62d70827890c33ebff1dcbd030dce9ef",
+    "src/expert.py": "280a51585cd999a337e977855bf3f464df15509c6eeb32f38ceb75330ca6f384",
+    "src/routes.py": "6ea3cdbd9461cf3c7261669ad674117554cb3fec2f22d73071a1ecf5c1fb07db",
+    "scripts/benchmark_mac.py": "d59962941b7f43c925496c4ea23fc516c6c49112fea01bd063dc3af1e6cede0f",
+    "scripts/check_route_labels.py": "48e7769379ccc2c378349cb64be80dd5aeee91298502837641d1c57190c60b5d",
+    "scripts/estimate_compute.py": "6c73a96a90dd2ef6adf6eb6287d673c75f74d153f1cca5fa446e024a0233d5bf",
+    "scripts/evaluate_stage1.py": "717f6f5c6a3be91ed43c9cf46286efdcab27552e6a444184a27e855df5688487",
+    "scripts/measure_route_gap.py": "cf2ba24d19a05e4bbad62aea7720471fc8080c6c020660f8748f22999341dddb",
+    "scripts/route_handcheck.py": "1457ccc0c545aa4ca6e136f2a09b3cf395a7203d389d46346f76627466a77f7b"
+  },
+  "packages": {
+    "numpy": "2.5.3",
+    "gymnasium": "1.4.0",
+    "gymnasium-robotics": "1.4.2",
+    "mujoco": "3.17.0"
+  },
+  "simulator": {
+    "random_actions": {
+      "repeats": 3,
+      "operations_per_repeat": 20000,
+      "elapsed_seconds": [
+        2.2860727919614874,
+        2.28158466599416,
+        2.3247124169720337
+      ],
+      "rates_per_second": [
+        8748.627808495843,
+        8765.837313902772,
+        8603.214683238215
+      ],
+      "median_per_second": 8748.627808495843,
+      "slowest_per_second": 8603.214683238215
+    },
+    "expert_episodes": {
+      "repeats": 3,
+      "operations_per_repeat": 20000,
+      "elapsed_seconds": [
+        2.31759749999037,
+        2.306173167016823,
+        2.3602992910309695
+      ],
+      "rates_per_second": [
+        8629.626153843841,
+        8672.37564205607,
+        8473.501676672571
+      ],
+      "median_per_second": 8629.626153843841,
+      "slowest_per_second": 8473.501676672571
+    },
+    "horizon": 100
+  },
+  "network": {
+    "device": "cpu",
+    "threads": 1,
+    "dtype": "float32",
+    "batch_size": 256,
+    "architecture": [
+      6,
+      256,
+      256,
+      81
+    ],
+    "parameters": 88401,
+    "optimizer": "Adam",
+    "synthetic_updates": {
+      "repeats": 3,
+      "operations_per_repeat": 300,
+      "elapsed_seconds": [
+        0.14673762494930997,
+        0.14667187503073364,
+        0.1466956670046784
+      ],
+      "rates_per_second": [
+        2044.4654198514797,
+        2045.3819107251336,
+        2045.0501785470763
+      ],
+      "median_per_second": 2045.0501785470763,
+      "slowest_per_second": 2044.4654198514797
+    },
+    "sampled_batch1_inference": {
+      "repeats": 3,
+      "operations_per_repeat": 2000,
+      "elapsed_seconds": [
+        0.055281875014770776,
+        0.055361291975714266,
+        0.05533566599478945
+      ],
+      "rates_per_second": [
+        36178.22296124398,
+        36126.32452431483,
+        36143.054647400924
+      ],
+      "median_per_second": 36143.054647400924,
+      "slowest_per_second": 36126.32452431483
+    },
+    "torch_version": "2.14.1",
+    "limitation": "Fixed synthetic batches; actual replay sampling and logging not measured. CPU only; no MPS claim."
+  },
+  "selector_surrogate": {
+    "implementation": "NumPy Gaussian kernel scoring surrogate",
+    "reference_points": 10000,
+    "candidates": 100,
+    "bandwidth": 0.1,
+    "selections": {
+      "repeats": 3,
+      "operations_per_repeat": 20,
+      "elapsed_seconds": [
+        0.2557945830048993,
+        0.2560904580168426,
+        0.26058737497078255
+      ],
+      "rates_per_second": [
+        78.18773863407785,
+        78.09740415507648,
+        76.74968905244327
+      ],
+      "median_per_second": 78.09740415507648,
+      "slowest_per_second": 76.74968905244327
+    },
+    "limitation": "Includes distance/kernel scoring, excludes real buffer sampling and selector integration."
+  }
+}
