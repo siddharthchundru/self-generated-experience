@@ -10,7 +10,7 @@ simulator with an independent source: the grid in `mazes.py`, a number worked
 out by hand, or a controlled push of the ball.
 
 What they establish:
-1. The walls MuJoCo builds are exactly the wall cells of the grid (M1 and M2).
+1. The walls MuJoCo builds are exactly the wall cells of the grid (M0, M1, M2).
 2. Cell/coordinate conversion matches hand-computed anchors, off-centre points
    and cell edges, and rejects points outside the maze.
 3. The task settings are what the spec says: 10 Hz control with exactly the
@@ -33,7 +33,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from envs.mazes import M1, M1_HELD_OUT_REGION, M2  # noqa: E402
+from envs.mazes import M0, M1, M1_HELD_OUT_REGION, M2  # noqa: E402
 from envs.pointmaze import (  # noqa: E402
     FRAME_SKIP, POSITION_NOISE, cell_to_xy, make_env, xy_to_cell,
 )
@@ -66,6 +66,9 @@ class TestWallsMatchGrid(unittest.TestCase):
 
     def test_m2(self):
         self.check("M2", M2)
+
+    def test_m0(self):
+        self.check("M0", M0)
 
 
 class TestCellConversion(unittest.TestCase):

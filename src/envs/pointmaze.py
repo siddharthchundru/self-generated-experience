@@ -41,12 +41,16 @@ import gymnasium as gym
 import gymnasium_robotics
 import numpy as np
 
-from envs.mazes import M1, M1_DEMO_REGION, M2, free_cells
+from envs.mazes import M0, M0_DEMO_REGION, M1, M1_DEMO_REGION, M2, free_cells
 
 gym.register_envs(gymnasium_robotics)
 
-MAZES = {"M1": M1, "M2": M2}
-DEFAULT_ALLOWED_GOALS = {"M1": M1_DEMO_REGION, "M2": frozenset(free_cells(M2))}
+MAZES = {"M0": M0, "M1": M1, "M2": M2}
+DEFAULT_ALLOWED_GOALS = {
+    "M0": M0_DEMO_REGION,
+    "M1": M1_DEMO_REGION,
+    "M2": frozenset(free_cells(M2)),
+}
 
 CONTROL_HZ = 10
 PHYSICS_DT = 0.01                                # library's fixed MuJoCo substep (s)
@@ -71,7 +75,8 @@ def make_env(
     Start and goal cells must be named on every reset:
         env.reset(seed=0, options={"reset_cell": [r, c], "goal_cell": [r, c]})
     and the goal cell must be in `allowed_goals`. On M1 the default is the demo
-    region R_d; the S_out evaluation passes M1_HELD_OUT_REGION explicitly. On M2,
+    region R_d (on M0, its own ring); the S_out evaluation passes
+    M1_HELD_OUT_REGION explicitly. On M2,
     which has no held-out region, every free cell is allowed. See RequireCells.
 
     `blocked_cells` turns the named free cells into walls. This is how the route

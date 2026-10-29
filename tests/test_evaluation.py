@@ -1,0 +1,151 @@
+"""Check endpoint denominators, missingness, budgets and real-wall evaluation.
+
+Analytic examples protect scientific definitions independently of the simulator.
+Small integration runs check policy isolation and one TOTAL adaptation budget.
+"""
+
+import sys
+import json
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from eval.metrics import best_of_m, common_pair_rep, summarise_rollouts
+from eval.policies import ExpertPolicy, RandomPolicy
+from eval.protocol import EvaluationConfig, TaskPair, episode_seed
+from eval.suite import AdaptationResult, collect, evaluate_policy, no_update_adaptation
+
+
+def records(north, south, failures):
+    return ([{"route": "north", "success": True, "first_success_step": 10}] * north
+            + [{"route": "south", "success": True, "first_success_step": 30}] * south
+            + [{"route": "neither", "success": False, "first_success_step": None}] * failures)
+
+
+class TestEndpointDefinitions(unittest.TestCase):
+    def test_competence_is_not_confused_with_conditional_share(self):
+        good = summarise_rollouts(records(45, 45, 10))
+        poor = summarise_rollouts(records(1, 1, 98))
+        self.assertEqual(good["Rep"], 0.5)
+        self.assertEqual(good["minority_route_success_rate"], 0.45)
+        self.assertIsNone(poor["Rep"])
+        self.assertEqual(poor["minority_route_success_rate"], 0.01)
+        self.assertEqual(poor["Rep_excluded_as_zero"], 0)
+
+    def test_zero_successes_are_undefined_rep_not_zero(self):
+        s = summarise_rollouts(records(0, 0, 100))
+        self.assertIsNone(s["Rep"])
+        self.assertIsNone(s["Rep_bootstrap_95"])
+        self.assertEqual(s["minority_route_success_rate"], 0)
+
+    def test_threshold_boundaries_and_route_quality_include_failures(self):
+        data = records(89, 11, 0) + [{"route": "south", "success": False, "first_success_step": None}]*10
+        s = summarise_rollouts(data)
+        self.assertEqual(s["route_class_counts"], {"0.05": 2, "0.1": 2, "0.2": 1})
+        self.assertEqual(s["per_route_quality"]["south"]["success_rate_given_route"], 11/21)
+        self.assertEqual(s["per_route_quality"]["south"]["first_success_seconds_mean"], 3)
+        self.assertEqual(s["Rep"], 0.11)
+        self.assertEqual(s["minority_route_success_rate"], 11/110)
+
+    def test_success_without_a_crossing_is_an_error(self):
+        with self.assertRaises(ValueError):
+            summarise_rollouts([{"route": "neither", "success": True}])
+
+    def test_common_pair_comparison_has_no_survivor_set_mismatch(self):
+        left = {1: {"Rep": 0.3}, 2: {"Rep": None}, 3: {"Rep": 0.2}}
+        right = {1: {"Rep": 0.1}, 2: {"Rep": 0.4}, 3: {"Rep": None}}
+        s = common_pair_rep(left, right)
+        self.assertEqual(s["common_rows"], [1])
+        self.assertAlmostEqual(s["left_minus_right"], 0.2)
+        self.assertEqual(s["dropped_rows"], [2, 3])
+        self.assertIsNone(common_pair_rep({1: {"Rep": None}}, {1: {"Rep": 0.4}})["left_minus_right"])
+
+    def test_best_of_uses_real_disjoint_groups(self):
+        data = [{"success": s} for s in (True, False, False, False, True, False)]
+        self.assertEqual(best_of_m(data, 2)["success_rate"], 2/3)
+        with self.assertRaises(ValueError):
+            best_of_m(data, 4)
+
+
+class TestProtocol(unittest.TestCase):
+    def test_fixed_blocks_have_equal_geometry_across_policies(self):
+        self.assertEqual(TaskPair("M1", 1).wall("north"), (1, 4))
+        self.assertEqual(TaskPair("M1", 7).wall("south"), (7, 4))
+        self.assertIsNone(TaskPair("M1", 4).shorter)
+        self.assertEqual(TaskPair("M0", 2).wall("north"), (1, 5))
+
+    def test_bad_budgets_and_incomplete_groups_fail(self):
+        with self.assertRaises(ValueError):
+            EvaluationConfig(adaptation_steps=101)
+        with self.assertRaises(ValueError):
+            EvaluationConfig(best_of_m=3)
+
+    def test_phase_and_row_seeds_are_independent_and_repeatable(self):
+        self.assertEqual(episode_seed(1, 2, 3, 4), episode_seed(1, 2, 3, 4))
+        self.assertNotEqual(episode_seed(1, 2, 3, 4), episode_seed(1, 2, 4, 4))
+
+    def test_long_adaptation_indices_do_not_change_the_seed_phase(self):
+        config = EvaluationConfig()
+        pair = TaskPair("M1", 2)
+        record = collect(RandomPolicy(), pair, 1, config, 1000, True, index_offset=500)[0]
+        self.assertEqual(record["seed"], episode_seed(config.seed, 2, 1000, 500))
+        self.assertNotEqual(record["seed"], episode_seed(config.seed, 2, 1500, 0))
+
+
+class TestEndToEnd(unittest.TestCase):
+    config = EvaluationConfig(sampled_rollouts=10, greedy_rollouts=2, minimum_successes=2,
+                              bootstrap_resamples=50, adaptation_steps=200)
+
+    def test_real_wall_expert_and_total_adaptation_budget(self):
+        report = evaluate_policy(ExpertPolicy(), self.config, no_update_adaptation)
+        self.assertEqual(report["aggregate"]["S_in"], 1)
+        self.assertEqual(len(report["aggregate"]["Rep_qualifying_rows"]), 6)
+        self.assertEqual(report["aggregate"]["primary_rows"], [1, 2, 3, 5, 6, 7])
+        for run in report["adaptation_runs"].values():
+            self.assertEqual(run["environment_steps"], 200)  # NOT 6*200
+            self.assertEqual(run["gradient_steps"], 0)
+        for phase in ("P1", "P1_own"):
+            collected = [r for r in report["rollouts"] if r["phase"] == phase+"_adaptation_collection"]
+            self.assertEqual(sum(r["steps"] for r in collected), 200)
+        # Expert ignores the wall: greedy insists on its original shorter route.
+        self.assertEqual(report["aggregate"]["A_k"], 0)
+        self.assertGreater(report["aggregate"]["A_0"], 0)
+        self.assertLess(report["aggregate"]["A_0"], 1)
+
+    def test_missing_learner_is_not_silently_replaced_by_learning(self):
+        report = evaluate_policy(RandomPolicy(), self.config)
+        self.assertIsNone(report["aggregate"]["A_k"])
+        self.assertEqual(report["aggregate"]["A_k_status"], "not_run")
+
+    def test_adapter_receives_independent_policy_copies(self):
+        calls = []
+        policy = ExpertPolicy()
+
+        def adapter(clone, tasks, config, phase):
+            self.assertIsNot(clone, policy)
+            calls.append(clone)
+            self.assertEqual(len(tasks), 6)
+            return AdaptationResult(clone, config.adaptation_steps, 0, "test_only", [])
+
+        evaluate_policy(policy, self.config, adapter)
+        self.assertEqual(len(calls), 2)
+        self.assertIsNot(calls[0], calls[1])
+
+    def test_m0_cli_gate_uses_its_four_primary_pairs_not_m1_six(self):
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)/"m0.json"
+            result = subprocess.run([sys.executable, "scripts/evaluate_stage1.py", "--quick",
+                                     "--maze", "M0", "--output", str(output)],
+                                    cwd=root, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+            report = json.loads(output.read_text())
+            self.assertTrue(report["evaluation_pipeline_passes"])
+            self.assertEqual(report["reports"][0]["aggregate"]["primary_rows"], [1, 2, 4, 5])
+
+
+if __name__ == "__main__":
+    unittest.main()

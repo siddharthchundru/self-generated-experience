@@ -1,0 +1,178 @@
+<title>Route Hand-Check</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a short instruction header, then a wrapping grid of maze cards, then a sticky tally bar with the answer string. */
+:root {
+  --bg: #f3f5f4;
+  --surface: #ffffff;
+  --ink: #1b2422;
+  --muted: #5d6b67;
+  --wall: #c9d1ce;
+  --floor: #ffffff;
+  --path-early: #9fd3c7;
+  --path-late: #0f6b5c;
+  --start: #2c5fa8;
+  --goal: #b8432f;
+  --chosen: #0f6b5c;
+  --chosen-ink: #ffffff;
+  --line: #dbe2df;
+  --font-body: "Atkinson Hyperlegible", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121816; --surface: #1a2220; --ink: #e4ebe8; --muted: #9aa8a4;
+  --wall: #34403d; --floor: #1f2826; --path-early: #2f6d60; --path-late: #8fe3cf;
+  --start: #7aa7ec; --goal: #f08a72; --chosen: #8fe3cf; --chosen-ink: #0d1413; --line: #2c3633;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121816; --surface: #1a2220; --ink: #e4ebe8; --muted: #9aa8a4;
+  --wall: #34403d; --floor: #1f2826; --path-early: #2f6d60; --path-late: #8fe3cf;
+  --start: #7aa7ec; --goal: #f08a72; --chosen: #8fe3cf; --chosen-ink: #0d1413; --line: #2c3633;
+  color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 24px 120px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1 { font-size: 1.6rem; margin: 0 0 8px; text-wrap: balance; }
+.intro { max-width: 68ch; color: var(--muted); display: grid; gap: 8px; margin-bottom: 20px; }
+.intro p { margin: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.ramp { width: 40px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--path-early), var(--path-late)); display: inline-block; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: grid; gap: 8px; min-width: 0; }
+.card.done { border-color: var(--chosen); }
+.head { display: flex; justify-content: space-between; align-items: baseline; font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); }
+.head b { color: var(--ink); font-size: 0.95rem; }
+svg { width: 100%; height: auto; display: block; }
+.choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+button { font: inherit; font-size: 0.85rem; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 6px; padding: 6px 4px; cursor: pointer; }
+button:hover { border-color: var(--muted); }
+button:focus-visible { outline: 2px solid var(--start); outline-offset: 2px; }
+button[aria-pressed="true"] { background: var(--chosen); color: var(--chosen-ink); border-color: var(--chosen); font-weight: 700; }
+.unsure { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--muted); }
+.bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line);
+  padding-block: 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.bar-inner { max-width: 1180px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.count { font-variant-numeric: tabular-nums; font-weight: 700; }
+#answer { flex: 1 1 260px; min-width: 0; font-family: var(--font-mono); font-size: 0.75rem; background: var(--bg); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px; height: 2.6em; resize: none; }
+#copy { background: var(--chosen); color: var(--chosen-ink); border-color: var(--chosen); font-weight: 700; padding: 6px 14px; }
+@media (prefers-reduced-motion: no-preference) { button { transition: background .12s, border-color .12s; } }
+</style>
+
+<div class="wrap">
+  <h1>Route hand-check: 60 trajectories on M1</h1>
+  <div class="intro">
+    <p>Each card shows one simulated rollout on a west–east pair of the ring. The ball starts on the west side and its goal is on the east side. For each, pick the route the ball took to get across to the goal side: the <strong>north</strong> arm, the <strong>south</strong> arm, or <strong>didn't get across</strong>.</p>
+    <p>The dashed vertical marker is the midpoint: passing from one side of it to the other in the top corridor counts as North, or in the bottom corridor as South. You do not have to reach the right-hand wall or the goal. Touching the marker and turning back does not count. If there are several crossings, use the last one. Some balls wander into one arm and turn back; tick <em>unsure</em> on any you can't call. The classifier's answers are hidden. When you're done, copy the answer line at the bottom and paste it into the chat.</p>
+  </div>
+  <div class="legend">
+    <span><span class="dot" style="background:var(--start)"></span>start</span>
+    <span><span class="dot" style="background:var(--goal)"></span>goal</span>
+    <span><span class="ramp"></span>path, early → late</span>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="bar"><div class="bar-inner">
+  <span class="count" id="count">0 / 60</span>
+  <textarea id="answer" readonly aria-label="Answer line to paste into the chat"></textarea>
+  <button id="copy" type="button">Copy answers</button>
+</div></div>
+
+<script>
+const GRID = __GRID__;
+const DATA = __DATA__;
+const ROWS = GRID.length, COLS = GRID[0].length;
+const KEY = "route-handcheck-v1";
+let labels = {};
+try { labels = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { labels = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(labels)); } catch (e) {} };
+
+// Simulator coordinates: cell (r, c) centre is (c + 0.5 - COLS/2, ROWS/2 - r - 0.5).
+const sx = x => x + COLS / 2, sy = y => ROWS / 2 - y;
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+
+function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function mix(a, b, t) {
+  const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const A = p(a), B = p(b);
+  return "rgb(" + A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(",") + ")";
+}
+
+function drawMaze(item) {
+  const svg = el("svg", { viewBox: `0 0 ${COLS} ${ROWS}`, role: "img", "aria-label": `Trajectory ${item.id}` });
+  svg.appendChild(el("rect", { x: 0, y: 0, width: COLS, height: ROWS, fill: "var(--floor)" }));
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++)
+    if (GRID[r][c] === 1) svg.appendChild(el("rect", { x: c, y: r, width: 1.01, height: 1.01, fill: "var(--wall)" }));
+  svg.appendChild(el("line", { x1: 4.5, y1: 0.8, x2: 4.5, y2: 8.2,
+    stroke: "#b7791f", "stroke-width": 0.06, "stroke-dasharray": "0.18 0.14", opacity: 0.85 }));
+  const midpoint = el("text", { x: 4.7, y: 0.65, fill: "var(--ink)", "font-size": 0.34 });
+  midpoint.textContent = "midpoint";
+  svg.appendChild(midpoint);
+  const pts = item.positions, early = css("--path-early"), late = css("--path-late");
+  for (let i = 0; i < pts.length - 1; i++) {
+    svg.appendChild(el("line", { x1: sx(pts[i][0]), y1: sy(pts[i][1]), x2: sx(pts[i + 1][0]), y2: sy(pts[i + 1][1]),
+      stroke: mix(early, late, i / (pts.length - 2)), "stroke-width": 0.12, "stroke-linecap": "round" }));
+  }
+  const [s, g] = item.pair;
+  svg.appendChild(el("circle", { cx: sx(pts[0][0]), cy: sy(pts[0][1]), r: 0.22, fill: "var(--start)" }));
+  svg.appendChild(el("rect", { x: g[1] + 0.3, y: g[0] + 0.3, width: 0.4, height: 0.4, fill: "none", stroke: "var(--goal)", "stroke-width": 0.1 }));
+  const end = pts[pts.length - 1];
+  svg.appendChild(el("circle", { cx: sx(end[0]), cy: sy(end[1]), r: 0.16, fill: "none", stroke: "var(--ink)", "stroke-width": 0.07 }));
+  return svg;
+}
+
+const CHOICES = [["N", "North"], ["S", "South"], ["X", "Didn't get across"]];
+function render() {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  for (const item of DATA) {
+    const card = document.createElement("div");
+    card.className = "card";
+    const head = document.createElement("div");
+    head.className = "head";
+    head.innerHTML = `<b>#${item.id}</b><span>row ${item.pair[0][0]} pair</span>`;
+    card.append(head, drawMaze(item));
+    const row = document.createElement("div");
+    row.className = "choices";
+    for (const [code, text] of CHOICES) {
+      const b = document.createElement("button");
+      b.type = "button"; b.id = `c${item.id}${code}`; b.textContent = text;
+      b.setAttribute("aria-pressed", String((labels[item.id] || {}).route === code));
+      b.addEventListener("click", () => { labels[item.id] = { ...(labels[item.id] || {}), route: code }; save(); render(); });
+      row.appendChild(b);
+    }
+    const unsure = document.createElement("label");
+    unsure.className = "unsure";
+    const box = document.createElement("input");
+    box.type = "checkbox"; box.id = `u${item.id}`; box.checked = !!(labels[item.id] || {}).unsure;
+    box.addEventListener("change", () => { labels[item.id] = { ...(labels[item.id] || {}), unsure: box.checked }; save(); update(); });
+    unsure.append(box, document.createTextNode("unsure"));
+    card.append(row, unsure);
+    if ((labels[item.id] || {}).route) card.classList.add("done");
+    grid.appendChild(card);
+  }
+  update();
+}
+function update() {
+  const done = DATA.filter(d => (labels[d.id] || {}).route).length;
+  document.getElementById("count").textContent = `${done} / ${DATA.length}`;
+  document.getElementById("answer").value = DATA.map(d => {
+    const l = labels[d.id] || {};
+    return d.id + (l.route || "-") + (l.unsure ? "?" : "");
+  }).join(" ");
+}
+document.getElementById("copy").addEventListener("click", async () => {
+  const box = document.getElementById("answer"), btn = document.getElementById("copy");
+  try { await navigator.clipboard.writeText(box.value); btn.textContent = "Copied"; }
+  catch (e) { box.focus(); box.select(); btn.textContent = "Selected: copy it"; }
+  setTimeout(() => { btn.textContent = "Copy answers"; }, 1800);
+});
+render();
+</script>

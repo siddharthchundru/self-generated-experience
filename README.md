@@ -4,8 +4,8 @@ Goal selection, behavioural repertoire and recovery in self-improving policies.
 
 > **Status: Stage 1 (harness) nearly complete.** This repository is a tested experimental apparatus. No learning experiments have been run, and the competence–repertoire–recovery trade-off below is a hypothesis to be tested, not a finding.
 > - Done: the literature check; the mazes with planner checks; the MuJoCo PointMaze simulator at 10 Hz with fixed-length episodes and guards against goal leakage; a scripted expert that drives either route on every two-route pair; the route-block perturbation; the measured route-length gap that fixes the learner's discount (γ = 0.962). Each piece was reviewed by an independent audit ([`notes/audits/`](notes/audits/)).
-> - In review: the route classifier for simulated rollouts, its hand-check, and the tuning maze M0.
-> - Next: the evaluation suite, then the learner. The plan is fixed in a pre-registration before the main runs.
+> - Implemented for review: the route classifier and M0; a 60-trajectory human check (56 certain labels, all agreeing); the end-to-end ring-task evaluation on expert/random stand-ins; Mac throughput and total-compute scenarios. Details and limitations: [`docs/stage1-evaluation.md`](docs/stage1-evaluation.md).
+> - Next: independent review of the remaining Stage 1 changes, then the learner. Stand-in adaptation performs no parameter updates. The plan is fixed in a pre-registration before the main runs.
 
 ## Question
 
@@ -76,8 +76,8 @@ The full design is in [`docs/spec.md`](docs/spec.md).
   - [x] simulator integration and fixed-length episodes (audited)
   - [x] determinism test
   - [x] scripted expert, route-block perturbation, route-length gap and γ (audited)
-  - [ ] route classifier with hand-check, tuning maze M0 (in review)
-  - [ ] evaluation suite
+  - [ ] route classifier with hand-check, tuning maze M0 (implemented; final independent review pending)
+  - [ ] evaluation suite and Mac compute estimate (implemented; final independent review pending)
 - [ ] **Stage 2:** learner, conditions, pilot, frozen pre-registration, main runs, re-learning control, report
 - [ ] **Stage 3:** second maze, second learner, further conditions and ablations
 - [ ] **Stage 4:** a goal-conditioned manipulation task with two solutions
@@ -96,7 +96,8 @@ tests/                   tests for mazes, simulator and expert     (done)
 notes/                   literature check
 notes/audits/            independent audit reports
 docs/spec.md             full design specification
-src/agents/, src/eval/   learner, goal selectors, evaluation       (Stage 1–2)
+src/eval/               ring-task evaluation and compute accounting (for review)
+src/agents/             learner and goal selectors                  (Stage 2)
 ```
 
 Run the tests (tested on Python 3.13; versions pinned in `requirements.txt`):

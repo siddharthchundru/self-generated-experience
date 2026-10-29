@@ -1,0 +1,4703 @@
+{
+  "git_commit": "536cb2d31d0c8f12d6c41274840e1872cd85bad2",
+  "working_tree_dirty": true,
+  "source_sha256": {
+    "src/envs/mazes.py": "fcc37bb2e43987fae3a5ced351ce13295d31023e9a3bf7680c101970945e8891",
+    "src/envs/pointmaze.py": "404cef5db1a2bcac8306843094d59d65c7946f82c8c6d4f8bfd28a1f95ae6d4b",
+    "src/eval/__init__.py": "dfe7d1400ef9f7730af25e419a09a4474db74c0de448d0fde97b1433e9a33f67",
+    "src/eval/compute.py": "addf3cc4b5fd8b46c9fb7872584a150a4b5ae8a54a93fa177c61d619237adb58",
+    "src/eval/metrics.py": "a12e41769fadbaae3d2c0b11558f514ff8ef49f963e60b4a3cf744de76726859",
+    "src/eval/policies.py": "c8d8a60da4705f7e27bbbd9b51262ae629b6460aef7000def53a570d3779806c",
+    "src/eval/protocol.py": "2b603d921a4eadb5af016a24d2b166844dfbe8f4e691c011db32b6f77f36b418",
+    "src/eval/suite.py": "8d01796d84dca998c870d60dfd2945ce358eef5d6a55b48ce87749a43b6d6def",
+    "src/expert.py": "280a51585cd999a337e977855bf3f464df15509c6eeb32f38ceb75330ca6f384",
+    "src/routes.py": "6ea3cdbd9461cf3c7261669ad674117554cb3fec2f22d73071a1ecf5c1fb07db",
+    "scripts/benchmark_mac.py": "d59962941b7f43c925496c4ea23fc516c6c49112fea01bd063dc3af1e6cede0f",
+    "scripts/check_route_labels.py": "7cf246a01626f7208a12a042da33217c54567ea82b8d47839f5bc2174b14decc",
+    "scripts/estimate_compute.py": "6c73a96a90dd2ef6adf6eb6287d673c75f74d153f1cca5fa446e024a0233d5bf",
+    "scripts/evaluate_stage1.py": "a46d3b0a1ba1220b2f73cc73a1222ba53574618941f425372cabcd203dbde83c",
+    "scripts/measure_route_gap.py": "cf2ba24d19a05e4bbad62aea7720471fc8080c6c020660f8748f22999341dddb",
+    "scripts/route_handcheck.py": "1457ccc0c545aa4ca6e136f2a09b3cf395a7203d389d46346f76627466a77f7b"
+  },
+  "machine": {
+    "system": "Darwin",
+    "architecture": "arm64",
+    "python": "3.13.18"
+  },
+  "packages": {
+    "numpy": "2.5.3",
+    "gymnasium": "1.4.0",
+    "gymnasium-robotics": "1.4.2",
+    "mujoco": "3.17.0"
+  },
+  "quick_smoke_only": true,
+  "evaluation_pipeline_passes": true,
+  "stage1_gate_complete": false,
+  "human_classifier_check_valid": true,
+  "outstanding_gate_evidence": [
+    "independent audit"
+  ],
+  "reports": [
+    {
+      "schema_version": 1,
+      "policy": "expert",
+      "config": {
+        "maze": "M0",
+        "horizon": 100,
+        "sampled_rollouts": 10,
+        "greedy_rollouts": 2,
+        "minimum_successes": 2,
+        "best_of_m": 5,
+        "bootstrap_resamples": 200,
+        "seed": 20261028,
+        "adaptation_steps": 100
+      },
+      "protocol_status": "stage1_planning_defaults_not_preregistered",
+      "temperature": 1,
+      "aggregate": {
+        "primary_rows": [
+          1,
+          2,
+          4,
+          5
+        ],
+        "S_in": 1.0,
+        "Rep": 0.375,
+        "Rep_qualifying_rows": [
+          1,
+          2,
+          4,
+          5
+        ],
+        "Rep_excluded_rows": [],
+        "Rep_excluded_as_zero": 0.375,
+        "minority_route_success_rate": 0.375,
+        "A_0": 0.525,
+        "best_of_m": 1.0,
+        "A_k": 0.0,
+        "A_k_status": [
+          "standin_no_parameter_updates"
+        ],
+        "P1_own_by_blocked_route": {
+          "north": {
+            "rows": [
+              1,
+              2
+            ],
+            "A_k": 0.0
+          },
+          "south": {
+            "rows": [
+              4,
+              5
+            ],
+            "A_k": 0.0
+          }
+        }
+      },
+      "pairs": [
+        {
+          "row": 1,
+          "start": [
+            1,
+            1
+          ],
+          "goal": [
+            1,
+            9
+          ],
+          "shorter_route": "north",
+          "is_primary_pair": true,
+          "S_in": 1.0,
+          "sampled": {
+            "rollouts": 10,
+            "successes": 10,
+            "sampled_success_rate": 1.0,
+            "route_attempts": {
+              "north": 5,
+              "south": 5,
+              "neither": 0
+            },
+            "route_successes": {
+              "north": 5,
+              "south": 5
+            },
+            "Rep": 0.5,
+            "Rep_qualifies": true,
+            "Rep_bootstrap_95": [
+              0.2,
+              0.5
+            ],
+            "Rep_excluded_as_zero": 0.5,
+            "minority_route": null,
+            "minority_route_success_rate": 0.5,
+            "route_class_counts": {
+              "0.05": 2,
+              "0.1": 2,
+              "0.2": 2
+            },
+            "route_entropy_nats": 0.6931471805599453,
+            "per_route_quality": {
+              "north": {
+                "attempts": 5,
+                "successes": 5,
+                "success_rate_given_route": 1.0,
+                "first_success_actions_mean": 17.0,
+                "first_success_seconds_mean": 1.7
+              },
+              "south": {
+                "attempts": 5,
+                "successes": 5,
+                "success_rate_given_route": 1.0,
+                "first_success_actions_mean": 35.2,
+                "first_success_seconds_mean": 3.5200000000000005
+              }
+            }
+          },
+          "P1": {
+            "wall": [
+              1,
+              5
+            ],
+            "A_0": 0.5,
+            "best_of_m": {
+              "m": 5,
+              "groups": 2,
+              "successful_groups": 2,
+              "success_rate": 1.0
+            },
+            "adaptation": {
+              "A_k": 0.0,
+              "status": "standin_no_parameter_updates"
+            }
+          },
+          "P1_own": {
+            "blocked_route": "north",
+            "wall": [
+              1,
+              5
+            ],
+            "greedy_route_counts": {
+              "north": 2,
+              "south": 0
+            },
+            "A_k": 0.0,
+            "status": "standin_no_parameter_updates"
+          }
+        },
+        {
+          "row": 2,
+          "start": [
+            2,
+            1
+          ],
+          "goal": [
+            2,
+            9
+          ],
+          "shorter_route": "north",
+          "is_primary_pair": true,
+          "S_in": 1.0,
+          "sampled": {
+            "rollouts": 10,
+            "successes": 10,
+            "sampled_success_rate": 1.0,
+            "route_attempts": {
+              "north": 9,
+              "south": 1,
+              "neither": 0
+            },
+            "route_successes": {
+              "north": 9,
+              "south": 1
+            },
+            "Rep": 0.1,
+            "Rep_qualifies": true,
+            "Rep_bootstrap_95": [
+              0.0,
+              0.30250000000000055
+            ],
+            "Rep_excluded_as_zero": 0.1,
+            "minority_route": "south",
+            "minority_route_success_rate": 0.1,
+            "route_class_counts": {
+              "0.05": 2,
+              "0.1": 2,
+              "0.2": 1
+            },
+            "route_entropy_nats": 0.3250829733914482,
+            "per_route_quality": {
+              "north": {
+                "attempts": 9,
+                "successes": 9,
+                "success_rate_given_route": 1.0,
+                "first_success_actions_mean": 22.555555555555557,
+                "first_success_seconds_mean": 2.2555555555555555
+              },
+              "south": {
+                "attempts": 1,
+                "successes": 1,
+                "success_rate_given_route": 1.0,
+                "first_success_actions_mean": 30.0,
+                "first_success_seconds_mean": 3.0
+              }
+            }
+          },
+          "P1": {
+            "wall": [
+              1,
+              5
+            ],
+            "A_0": 0.6,
+            "best_of_m": {
+              "m": 5,
+              "groups": 2,
+              "successful_groups": 2,
+              "success_rate": 1.0
+            },
+            "adaptation": {
+              "A_k": 0.0,
+              "status": "standin_no_parameter_updates"
+            }
+          },
+          "P1_own": {
+            "blocked_route": "north",
+            "wall": [
+              1,
+              5
+            ],
+            "greedy_route_counts": {
+              "north": 2,
+              "south": 0
+            },
+            "A_k": 0.0,
+            "status": "standin_no_parameter_updates"
+          }
+        },
+        {
+          "row": 3,
+          "start": [
+            3,
+            1
+          ],
+          "goal": [
+            3,
+            9
+          ],
+          "shorter_route": null,
+          "is_primary_pair": false,
+          "S_in": 1.0,
+          "sampled": {
+            "rollouts": 10,
+            "successes": 10,
+            "sampled_success_rate": 1.0,
+            "route_attempts": {
+              "north": 5,
+              "south": 5,
+              "neither": 0
+            },
+            "route_successes": {
+              "north": 5,
+              "south": 5
+            },
+            "Rep": 0.5,
+            "Rep_qualifies": true,
+            "Rep_bootstrap_95": [
+              0.2,
+              0.5
+            ],
+            "Rep_excluded_as_zero": 0.5,
+            "minority_route": null,
+            "minority_route_success_rate": 0.5,
+            "route_class_counts": {
+              "0.05": 2,
+              "0.1": 2,
+              "0.2": 2
+            },
+            "route_entropy_nats": 0.6931471805599453,
+            "per_route_quality": {
+              "north": {
+                "attempts": 5,
+                "successes": 5,
+                "success_rate_given_route": 1.0,
+                "first_success_actions_mean": 25.8,
+                "first_success_seconds_mean": 2.58
+              },
+              "south": {
+                "attempts": 5,
+                "successes": 5,
+                "success_rate_given_route": 1.0,
+                "first_success_actions_mean": 26.0,
+                "first_success_seconds_mean": 2.6
+              }
+            }
+          }
+        },
+        {
+          "row": 4,
+          "start": [
+            4,
+            1
+          ],
+          "goal": [
+            4,
+            9
+          ],
+          "shorter_route": "south",
+          "is_primary_pair": true,
+          "S_in": 1.0,
+          "sampled": {
+            "rollouts": 10,
+            "successes": 10,
+            "sampled_success_rate": 1.0,
+            "route_attempts": {
+              "north": 6,
+              "south": 4,
+              "neither": 0
+            },
+            "route_successes": {
+              "north": 6,
+              "south": 4
+            },
+            "Rep": 0.4,
+            "Rep_qualifies": true,
+            "Rep_bootstrap_95": [
+              0.1,
+              0.5
+            ],
+            "Rep_excluded_as_zero": 0.4,
+            "minority_route": "south",
+            "minority_route_success_rate": 0.4,
+            "route_class_counts": {
+              "0.05": 2,
+              "0.1": 2,
+              "0.2": 2
+            },
+            "route_entropy_nats": 0.6730116670092565,
+            "per_route_quality": {
+              "north": {
+                "attempts": 6,
+                "successes": 6,
+                "success_rate_given_route": 1.0,
+                "first_success_actions_mean": 30.166666666666668,
+                "first_success_seconds_mean": 3.016666666666666
+              },
+              "south": {
+                "attempts": 4,
+                "successes": 4,
+                "success_rate_given_route": 1.0,
+                "first_success_actions_mean": 22.0,
+                "first_success_seconds_mean": 2.2
+              }
+            }
+          },
+          "P1": {
+            "wall": [
+              5,
+              5
+            ],
+            "A_0": 0.6,
+            "best_of_m": {
+              "m": 5,
+              "groups": 2,
+              "successful_groups": 2,
+              "success_rate": 1.0
+            },
+            "adaptation": {
+              "A_k": 0.0,
+              "status": "standin_no_parameter_updates"
+            }
+          },
+          "P1_own": {
+            "blocked_route": "south",
+            "wall": [
+              5,
+              5
+            ],
+            "greedy_route_counts": {
+              "north": 0,
+              "south": 2
+            },
+            "A_k": 0.0,
+            "status": "standin_no_parameter_updates"
+          }
+        },
+        {
+          "row": 5,
+          "start": [
+            5,
+            1
+          ],
+          "goal": [
+            5,
+            9
+          ],
+          "shorter_route": "south",
+          "is_primary_pair": true,
+          "S_in": 1.0,
+          "sampled": {
+            "rollouts": 10,
+            "successes": 10,
+            "sampled_success_rate": 1.0,
+            "route_attempts": {
+              "north": 5,
+              "south": 5,
+              "neither": 0
+            },
+            "route_successes": {
+              "north": 5,
+              "south": 5
+            },
+            "Rep": 0.5,
+            "Rep_qualifies": true,
+            "Rep_bootstrap_95": [
+              0.1,
+              0.5
+            ],
+            "Rep_excluded_as_zero": 0.5,
+            "minority_route": null,
+            "minority_route_success_rate": 0.5,
+            "route_class_counts": {
+              "0.05": 2,
+              "0.1": 2,
+              "0.2": 2
+            },
+            "route_entropy_nats": 0.6931471805599453,
+            "per_route_quality": {
+              "north": {
+                "attempts": 5,
+                "successes": 5,
+                "success_rate_given_route": 1.0,
+                "first_success_actions_mean": 34.6,
+                "first_success_seconds_mean": 3.4599999999999995
+              },
+              "south": {
+                "attempts": 5,
+                "successes": 5,
+                "success_rate_given_route": 1.0,
+                "first_success_actions_mean": 16.8,
+                "first_success_seconds_mean": 1.6799999999999997
+              }
+            }
+          },
+          "P1": {
+            "wall": [
+              5,
+              5
+            ],
+            "A_0": 0.4,
+            "best_of_m": {
+              "m": 5,
+              "groups": 2,
+              "successful_groups": 2,
+              "success_rate": 1.0
+            },
+            "adaptation": {
+              "A_k": 0.0,
+              "status": "standin_no_parameter_updates"
+            }
+          },
+          "P1_own": {
+            "blocked_route": "south",
+            "wall": [
+              5,
+              5
+            ],
+            "greedy_route_counts": {
+              "north": 0,
+              "south": 2
+            },
+            "A_k": 0.0,
+            "status": "standin_no_parameter_updates"
+          }
+        }
+      ],
+      "rollouts": [
+        {
+          "seed": 2343329615,
+          "row": 1,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 17,
+          "steps": 100,
+          "reward_sum": 84.0,
+          "final_goal_distance": 0.06871209730263773,
+          "path_length": 10.395909226335382,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2984012532,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 35,
+          "steps": 100,
+          "reward_sum": 66.0,
+          "final_goal_distance": 0.07791046553240223,
+          "path_length": 18.261918986661758,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 601672163,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 36,
+          "steps": 100,
+          "reward_sum": 65.0,
+          "final_goal_distance": 0.06550375207813271,
+          "path_length": 18.583261877768823,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1945690056,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 35,
+          "steps": 100,
+          "reward_sum": 66.0,
+          "final_goal_distance": 0.05321543706845474,
+          "path_length": 17.671150481687814,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2600080901,
+          "row": 1,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 17,
+          "steps": 100,
+          "reward_sum": 84.0,
+          "final_goal_distance": 0.09376489881342918,
+          "path_length": 10.885807661956186,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2651113622,
+          "row": 1,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 17,
+          "steps": 100,
+          "reward_sum": 84.0,
+          "final_goal_distance": 0.05553837926556788,
+          "path_length": 11.188986114990492,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1194754119,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 35,
+          "steps": 100,
+          "reward_sum": 66.0,
+          "final_goal_distance": 0.04591266934950731,
+          "path_length": 19.100947270992055,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3737559782,
+          "row": 1,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 17,
+          "steps": 100,
+          "reward_sum": 84.0,
+          "final_goal_distance": 0.045541531969385124,
+          "path_length": 10.181637021023338,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1326257699,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 35,
+          "steps": 100,
+          "reward_sum": 66.0,
+          "final_goal_distance": 0.07167214475614359,
+          "path_length": 18.72582984601618,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2037180407,
+          "row": 1,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 17,
+          "steps": 100,
+          "reward_sum": 84.0,
+          "final_goal_distance": 0.08144792514551472,
+          "path_length": 11.27116087387359,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 642052927,
+          "row": 1,
+          "sampled": false,
+          "route": "north",
+          "success": true,
+          "first_success_step": 17,
+          "steps": 100,
+          "reward_sum": 84.0,
+          "final_goal_distance": 0.046186686963802355,
+          "path_length": 17.806009930183276,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 3793355941,
+          "row": 1,
+          "sampled": false,
+          "route": "north",
+          "success": true,
+          "first_success_step": 17,
+          "steps": 100,
+          "reward_sum": 84.0,
+          "final_goal_distance": 0.06392030911118651,
+          "path_length": 9.616829425901411,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 4037914823,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 34,
+          "steps": 100,
+          "reward_sum": 67.0,
+          "final_goal_distance": 0.09904671719414429,
+          "path_length": 18.073747967422126,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 2665632690,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 33,
+          "steps": 100,
+          "reward_sum": 68.0,
+          "final_goal_distance": 0.058396458509025195,
+          "path_length": 19.511507491026205,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 4116349875,
+          "row": 1,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.730644301162033,
+          "path_length": 4.48794699319355,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 1579005372,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 35,
+          "steps": 100,
+          "reward_sum": 66.0,
+          "final_goal_distance": 0.07605294197952822,
+          "path_length": 18.124022150514772,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 686373649,
+          "row": 1,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.780677242527937,
+          "path_length": 5.145597284711285,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 3397833000,
+          "row": 1,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.844660488928481,
+          "path_length": 5.373277345287298,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 3218038064,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 33,
+          "steps": 100,
+          "reward_sum": 68.0,
+          "final_goal_distance": 0.08877367349082417,
+          "path_length": 18.01574425576861,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 1781962282,
+          "row": 1,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.680556222398031,
+          "path_length": 4.9379855085324245,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 4294825063,
+          "row": 1,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.550951345975808,
+          "path_length": 5.467308087260591,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 3899647141,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 37,
+          "steps": 100,
+          "reward_sum": 64.0,
+          "final_goal_distance": 0.05816952879044636,
+          "path_length": 17.86276731556274,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 4230583945,
+          "row": 2,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 23,
+          "steps": 100,
+          "reward_sum": 78.0,
+          "final_goal_distance": 0.027899859483552086,
+          "path_length": 19.51069775074961,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2247411002,
+          "row": 2,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 22,
+          "steps": 100,
+          "reward_sum": 79.0,
+          "final_goal_distance": 0.04073578570581042,
+          "path_length": 13.278194272675714,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3593124081,
+          "row": 2,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 22,
+          "steps": 100,
+          "reward_sum": 79.0,
+          "final_goal_distance": 0.07246848464533968,
+          "path_length": 12.760488293483277,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 4201089479,
+          "row": 2,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 23,
+          "steps": 100,
+          "reward_sum": 78.0,
+          "final_goal_distance": 0.1021109954309868,
+          "path_length": 13.462905480942688,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 681227916,
+          "row": 2,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 22,
+          "steps": 100,
+          "reward_sum": 79.0,
+          "final_goal_distance": 0.10675056231852739,
+          "path_length": 12.073934975185145,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3070009298,
+          "row": 2,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 30,
+          "steps": 100,
+          "reward_sum": 71.0,
+          "final_goal_distance": 0.08846521938557911,
+          "path_length": 15.83746602942366,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 243913401,
+          "row": 2,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 24,
+          "steps": 100,
+          "reward_sum": 77.0,
+          "final_goal_distance": 0.08426797210872863,
+          "path_length": 12.47080393157046,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 4240033142,
+          "row": 2,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 21,
+          "steps": 100,
+          "reward_sum": 80.0,
+          "final_goal_distance": 0.009208681599730534,
+          "path_length": 19.291325402932618,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3176070098,
+          "row": 2,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 23,
+          "steps": 100,
+          "reward_sum": 78.0,
+          "final_goal_distance": 0.02177573271816619,
+          "path_length": 12.012427118059673,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1543737144,
+          "row": 2,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 23,
+          "steps": 100,
+          "reward_sum": 78.0,
+          "final_goal_distance": 0.05465922681214878,
+          "path_length": 12.84017239731965,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 4004865298,
+          "row": 2,
+          "sampled": false,
+          "route": "north",
+          "success": true,
+          "first_success_step": 23,
+          "steps": 100,
+          "reward_sum": 78.0,
+          "final_goal_distance": 0.08371752757189918,
+          "path_length": 13.425428375191547,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 21717714,
+          "row": 2,
+          "sampled": false,
+          "route": "north",
+          "success": true,
+          "first_success_step": 23,
+          "steps": 100,
+          "reward_sum": 78.0,
+          "final_goal_distance": 0.04281897703587029,
+          "path_length": 12.413819925010099,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 164283684,
+          "row": 2,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 29,
+          "steps": 100,
+          "reward_sum": 72.0,
+          "final_goal_distance": 0.07435888350356651,
+          "path_length": 16.443244506536665,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 2788747230,
+          "row": 2,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 29,
+          "steps": 100,
+          "reward_sum": 72.0,
+          "final_goal_distance": 0.05748998159418738,
+          "path_length": 16.276965359163224,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 874646829,
+          "row": 2,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.897405464389654,
+          "path_length": 5.494602823846046,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 952819371,
+          "row": 2,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 31,
+          "steps": 100,
+          "reward_sum": 70.0,
+          "final_goal_distance": 0.11284452743796915,
+          "path_length": 16.489718977185678,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 472152342,
+          "row": 2,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.934183872562654,
+          "path_length": 9.280671640825869,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 2512387353,
+          "row": 2,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 31,
+          "steps": 100,
+          "reward_sum": 70.0,
+          "final_goal_distance": 0.05365168560909616,
+          "path_length": 16.645571423204586,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 1881029972,
+          "row": 2,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 31,
+          "steps": 100,
+          "reward_sum": 70.0,
+          "final_goal_distance": 0.08940671861937531,
+          "path_length": 16.900178140832807,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 1437606189,
+          "row": 2,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.789020779412679,
+          "path_length": 5.927783803291172,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 1965711158,
+          "row": 2,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.92995794374982,
+          "path_length": 5.635745540035315,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 2147962278,
+          "row": 2,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 31,
+          "steps": 100,
+          "reward_sum": 70.0,
+          "final_goal_distance": 0.06922082829555919,
+          "path_length": 15.514784477733835,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 2585106437,
+          "row": 3,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 26,
+          "steps": 100,
+          "reward_sum": 75.0,
+          "final_goal_distance": 0.1071252582479711,
+          "path_length": 15.34693541110773,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1033596973,
+          "row": 3,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 26,
+          "steps": 100,
+          "reward_sum": 75.0,
+          "final_goal_distance": 0.07926395993680797,
+          "path_length": 14.09068005530684,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2715246027,
+          "row": 3,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 27,
+          "steps": 100,
+          "reward_sum": 74.0,
+          "final_goal_distance": 0.03448378213090045,
+          "path_length": 13.902786894864239,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1886316681,
+          "row": 3,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 26,
+          "steps": 100,
+          "reward_sum": 75.0,
+          "final_goal_distance": 0.10584597118760797,
+          "path_length": 13.689263007192004,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2131973971,
+          "row": 3,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 26,
+          "steps": 100,
+          "reward_sum": 75.0,
+          "final_goal_distance": 0.08185823827995845,
+          "path_length": 16.571895374111033,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1578356600,
+          "row": 3,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 25,
+          "steps": 100,
+          "reward_sum": 76.0,
+          "final_goal_distance": 0.08630229850959102,
+          "path_length": 13.704630128696008,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 4269696572,
+          "row": 3,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 26,
+          "steps": 100,
+          "reward_sum": 75.0,
+          "final_goal_distance": 0.054497932537724454,
+          "path_length": 13.644598185595173,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1876168125,
+          "row": 3,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 25,
+          "steps": 100,
+          "reward_sum": 76.0,
+          "final_goal_distance": 0.05312558795282434,
+          "path_length": 13.43541692899662,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3476048495,
+          "row": 3,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 26,
+          "steps": 100,
+          "reward_sum": 75.0,
+          "final_goal_distance": 0.019807447887924216,
+          "path_length": 14.598693050157959,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1951539827,
+          "row": 3,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 26,
+          "steps": 100,
+          "reward_sum": 75.0,
+          "final_goal_distance": 0.07917007091947402,
+          "path_length": 14.652982145325517,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2487173954,
+          "row": 3,
+          "sampled": false,
+          "route": "north",
+          "success": true,
+          "first_success_step": 28,
+          "steps": 100,
+          "reward_sum": 73.0,
+          "final_goal_distance": 0.07029238141855049,
+          "path_length": 14.712441283529055,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 2613866545,
+          "row": 3,
+          "sampled": false,
+          "route": "north",
+          "success": true,
+          "first_success_step": 25,
+          "steps": 100,
+          "reward_sum": 76.0,
+          "final_goal_distance": 0.08613595756980025,
+          "path_length": 13.637789787788623,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 3156447764,
+          "row": 4,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 30,
+          "steps": 100,
+          "reward_sum": 71.0,
+          "final_goal_distance": 0.05857450303234547,
+          "path_length": 16.08872570927017,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3839019896,
+          "row": 4,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 32,
+          "steps": 100,
+          "reward_sum": 69.0,
+          "final_goal_distance": 0.0910414486033258,
+          "path_length": 15.727244568612106,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 573270613,
+          "row": 4,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 22,
+          "steps": 100,
+          "reward_sum": 79.0,
+          "final_goal_distance": 0.0822656741514092,
+          "path_length": 13.064999927609101,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2674342872,
+          "row": 4,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 30,
+          "steps": 100,
+          "reward_sum": 71.0,
+          "final_goal_distance": 0.056634729789389264,
+          "path_length": 16.594919423552604,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 4082539243,
+          "row": 4,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 21,
+          "steps": 100,
+          "reward_sum": 80.0,
+          "final_goal_distance": 0.0851996352513282,
+          "path_length": 11.534557119629103,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 574963832,
+          "row": 4,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 31,
+          "steps": 100,
+          "reward_sum": 70.0,
+          "final_goal_distance": 0.094298796291913,
+          "path_length": 18.12444347785148,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3081140328,
+          "row": 4,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 28,
+          "steps": 100,
+          "reward_sum": 73.0,
+          "final_goal_distance": 0.07436046653974958,
+          "path_length": 15.906276530828968,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 150995071,
+          "row": 4,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 22,
+          "steps": 100,
+          "reward_sum": 79.0,
+          "final_goal_distance": 0.06054546767684577,
+          "path_length": 11.852011199948773,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2903150222,
+          "row": 4,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 30,
+          "steps": 100,
+          "reward_sum": 71.0,
+          "final_goal_distance": 0.05647883151364441,
+          "path_length": 16.86996657489493,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 952122230,
+          "row": 4,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 23,
+          "steps": 100,
+          "reward_sum": 78.0,
+          "final_goal_distance": 0.10357056335054507,
+          "path_length": 13.001117349741227,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3278482144,
+          "row": 4,
+          "sampled": false,
+          "route": "south",
+          "success": true,
+          "first_success_step": 23,
+          "steps": 100,
+          "reward_sum": 78.0,
+          "final_goal_distance": 0.06069454363595074,
+          "path_length": 12.923259484100099,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 2132026004,
+          "row": 4,
+          "sampled": false,
+          "route": "south",
+          "success": true,
+          "first_success_step": 24,
+          "steps": 100,
+          "reward_sum": 77.0,
+          "final_goal_distance": 0.08776028118886506,
+          "path_length": 14.076870036810758,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 1815145873,
+          "row": 4,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.687878115939315,
+          "path_length": 5.9413131024799295,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 4176689427,
+          "row": 4,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 29,
+          "steps": 100,
+          "reward_sum": 72.0,
+          "final_goal_distance": 0.04438382957104069,
+          "path_length": 16.22061563741081,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 1306010032,
+          "row": 4,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 32,
+          "steps": 100,
+          "reward_sum": 69.0,
+          "final_goal_distance": 0.06997644385439755,
+          "path_length": 16.040077567752604,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 4177006286,
+          "row": 4,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.688211011147082,
+          "path_length": 5.8737051973255445,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 2925743037,
+          "row": 4,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 32,
+          "steps": 100,
+          "reward_sum": 69.0,
+          "final_goal_distance": 0.06173265901094413,
+          "path_length": 17.553060974668217,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 3803769340,
+          "row": 4,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.869065521646415,
+          "path_length": 5.477829476731048,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 2608857339,
+          "row": 4,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 31,
+          "steps": 100,
+          "reward_sum": 70.0,
+          "final_goal_distance": 0.07502250815582708,
+          "path_length": 16.08789350564813,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 708388589,
+          "row": 4,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 33,
+          "steps": 100,
+          "reward_sum": 68.0,
+          "final_goal_distance": 0.045918834244582186,
+          "path_length": 16.85860552102534,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 2253470769,
+          "row": 4,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.731793759390796,
+          "path_length": 5.4684827551483135,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 3716872418,
+          "row": 4,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 31,
+          "steps": 100,
+          "reward_sum": 70.0,
+          "final_goal_distance": 0.03524458667726984,
+          "path_length": 15.749848228336912,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 3812701017,
+          "row": 5,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 37,
+          "steps": 100,
+          "reward_sum": 64.0,
+          "final_goal_distance": 0.021545150889196604,
+          "path_length": 18.520405093778948,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2527391128,
+          "row": 5,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 34,
+          "steps": 100,
+          "reward_sum": 67.0,
+          "final_goal_distance": 0.08448501074269324,
+          "path_length": 17.71254315329636,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1573363745,
+          "row": 5,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 17,
+          "steps": 100,
+          "reward_sum": 84.0,
+          "final_goal_distance": 0.09251649033333197,
+          "path_length": 10.361137122356979,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 807517867,
+          "row": 5,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 17,
+          "steps": 100,
+          "reward_sum": 84.0,
+          "final_goal_distance": 0.04281785862499358,
+          "path_length": 17.885780486369406,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2670774830,
+          "row": 5,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 17,
+          "steps": 100,
+          "reward_sum": 84.0,
+          "final_goal_distance": 0.07491345456692002,
+          "path_length": 9.496036459335327,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2035026412,
+          "row": 5,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 35,
+          "steps": 100,
+          "reward_sum": 66.0,
+          "final_goal_distance": 0.06455782399104201,
+          "path_length": 18.038563527230444,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3373286958,
+          "row": 5,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 16,
+          "steps": 100,
+          "reward_sum": 85.0,
+          "final_goal_distance": 0.05777292979975812,
+          "path_length": 9.957183711105841,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2078988032,
+          "row": 5,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 33,
+          "steps": 100,
+          "reward_sum": 68.0,
+          "final_goal_distance": 0.09445109170616398,
+          "path_length": 17.511588112242848,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3887522596,
+          "row": 5,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 17,
+          "steps": 100,
+          "reward_sum": 84.0,
+          "final_goal_distance": 0.09221973329251984,
+          "path_length": 10.080126080284089,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3348574122,
+          "row": 5,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 34,
+          "steps": 100,
+          "reward_sum": 67.0,
+          "final_goal_distance": 0.05023596536743475,
+          "path_length": 17.687815505206522,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2744465018,
+          "row": 5,
+          "sampled": false,
+          "route": "south",
+          "success": true,
+          "first_success_step": 18,
+          "steps": 100,
+          "reward_sum": 83.0,
+          "final_goal_distance": 0.0759425733174583,
+          "path_length": 9.73103886661793,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 3498913050,
+          "row": 5,
+          "sampled": false,
+          "route": "south",
+          "success": true,
+          "first_success_step": 16,
+          "steps": 100,
+          "reward_sum": 85.0,
+          "final_goal_distance": 0.059906416678068716,
+          "path_length": 10.376110312984636,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 2397719618,
+          "row": 5,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 35,
+          "steps": 100,
+          "reward_sum": 66.0,
+          "final_goal_distance": 0.0788053120115969,
+          "path_length": 18.897700850423373,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 3999610142,
+          "row": 5,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.744742468328399,
+          "path_length": 4.594875723787283,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 427684598,
+          "row": 5,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.5990816814689754,
+          "path_length": 5.090805960291204,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 3899640903,
+          "row": 5,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 35,
+          "steps": 100,
+          "reward_sum": 66.0,
+          "final_goal_distance": 0.02541495726181221,
+          "path_length": 18.182414393385535,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 2279796203,
+          "row": 5,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.842752986182887,
+          "path_length": 4.783021144124444,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 1509628182,
+          "row": 5,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.5494133706786,
+          "path_length": 7.063576161563573,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 167443480,
+          "row": 5,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.719292798870858,
+          "path_length": 4.687327560164568,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 2101598098,
+          "row": 5,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 36,
+          "steps": 100,
+          "reward_sum": 65.0,
+          "final_goal_distance": 0.04782787476981827,
+          "path_length": 18.280174967996427,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 3805305770,
+          "row": 5,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.608708277322399,
+          "path_length": 5.001297752026032,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 1768984257,
+          "row": 5,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 35,
+          "steps": 100,
+          "reward_sum": 66.0,
+          "final_goal_distance": 0.09334789212303754,
+          "path_length": 18.01637630887743,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 3881192529,
+          "row": 5,
+          "sampled": true,
+          "route": "north",
+          "success": true,
+          "first_success_step": 33,
+          "steps": 100,
+          "reward_sum": 68.0,
+          "final_goal_distance": 0.06423756720534175,
+          "path_length": 18.316290714670487,
+          "wall": [
+            5,
+            5
+          ],
+          "phase": "P1_adaptation_collection"
+        },
+        {
+          "seed": 2484377166,
+          "row": 1,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.396920447066003,
+          "path_length": 4.922623181402626,
+          "phase": "P1_post_adaptation_greedy",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 3576888843,
+          "row": 1,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.418375632305529,
+          "path_length": 4.890205426763207,
+          "phase": "P1_post_adaptation_greedy",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 1069653685,
+          "row": 2,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.86088277892261,
+          "path_length": 6.8910143275942595,
+          "phase": "P1_post_adaptation_greedy",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 4020148346,
+          "row": 2,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.575728891855719,
+          "path_length": 6.5426820981567175,
+          "phase": "P1_post_adaptation_greedy",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 2329620779,
+          "row": 4,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.9232209866493015,
+          "path_length": 5.893233827476431,
+          "phase": "P1_post_adaptation_greedy",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 2745060557,
+          "row": 4,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.768454453564759,
+          "path_length": 5.376628042781052,
+          "phase": "P1_post_adaptation_greedy",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 2471221879,
+          "row": 5,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.495264144652001,
+          "path_length": 6.084438940270312,
+          "phase": "P1_post_adaptation_greedy",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 1566576296,
+          "row": 5,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.77923664411926,
+          "path_length": 4.853797847680836,
+          "phase": "P1_post_adaptation_greedy",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 966848758,
+          "row": 4,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.536601521520323,
+          "path_length": 5.42772235314618,
+          "wall": [
+            5,
+            5
+          ],
+          "phase": "P1_own_adaptation_collection"
+        },
+        {
+          "seed": 3331859726,
+          "row": 1,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.739845149378815,
+          "path_length": 5.603570146676769,
+          "phase": "P1_own_post_adaptation_greedy",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 3643469313,
+          "row": 1,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.740393428747075,
+          "path_length": 5.741024981057005,
+          "phase": "P1_own_post_adaptation_greedy",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 4110772426,
+          "row": 2,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.55633977507473,
+          "path_length": 6.166095868356432,
+          "phase": "P1_own_post_adaptation_greedy",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 1711488554,
+          "row": 2,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.849218182803801,
+          "path_length": 5.438455019037944,
+          "phase": "P1_own_post_adaptation_greedy",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 746780713,
+          "row": 4,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.4963288086119935,
+          "path_length": 5.614929596375122,
+          "phase": "P1_own_post_adaptation_greedy",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 3858714279,
+          "row": 4,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.712116265384162,
+          "path_length": 8.436424653748713,
+          "phase": "P1_own_post_adaptation_greedy",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 1822158621,
+          "row": 5,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.768386631322017,
+          "path_length": 4.67890362371349,
+          "phase": "P1_own_post_adaptation_greedy",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 2619461349,
+          "row": 5,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.793802294470039,
+          "path_length": 4.518070825346076,
+          "phase": "P1_own_post_adaptation_greedy",
+          "wall": [
+            5,
+            5
+          ]
+        }
+      ],
+      "adaptation_runs": {
+        "P1": {
+          "status": "standin_no_parameter_updates",
+          "environment_steps": 100,
+          "gradient_steps": 0,
+          "task_rows": [
+            1,
+            2,
+            4,
+            5
+          ],
+          "buffer_initialisation": "empty_required_by_adapter_contract"
+        },
+        "P1_own": {
+          "status": "standin_no_parameter_updates",
+          "environment_steps": 100,
+          "gradient_steps": 0,
+          "task_rows": [
+            1,
+            2,
+            4,
+            5
+          ],
+          "buffer_initialisation": "empty_required_by_adapter_contract"
+        }
+      },
+      "environment_steps": 11800,
+      "elapsed_seconds": 2.214739457995165,
+      "limitations": [
+        "No neural learner is implemented. Stand-in adaptation performs zero updates.",
+        "Random policy has no greedy action: its ordinary random actions fill greedy evaluation slots.",
+        "P1-own counts all greedy route crossings; ties choose the shorter route; no crossings is undefined.",
+        "Best-of-m uses disjoint groups of zero-shot attempts, sharing data with A_0.",
+        "M2, training exposure diagnostics, S_out and P2/P3 are outside this ring-task suite."
+      ]
+    },
+    {
+      "schema_version": 1,
+      "policy": "random",
+      "config": {
+        "maze": "M0",
+        "horizon": 100,
+        "sampled_rollouts": 10,
+        "greedy_rollouts": 2,
+        "minimum_successes": 2,
+        "best_of_m": 5,
+        "bootstrap_resamples": 200,
+        "seed": 20261028,
+        "adaptation_steps": 100
+      },
+      "protocol_status": "stage1_planning_defaults_not_preregistered",
+      "temperature": 1,
+      "aggregate": {
+        "primary_rows": [
+          1,
+          2,
+          4,
+          5
+        ],
+        "S_in": 0.0,
+        "Rep": null,
+        "Rep_qualifying_rows": [],
+        "Rep_excluded_rows": [
+          1,
+          2,
+          4,
+          5
+        ],
+        "Rep_excluded_as_zero": 0.0,
+        "minority_route_success_rate": 0.0,
+        "A_0": 0.0,
+        "best_of_m": 0.0,
+        "A_k": 0.0,
+        "A_k_status": [
+          "standin_no_parameter_updates"
+        ],
+        "P1_own_by_blocked_route": {
+          "north": {
+            "rows": [
+              1,
+              4
+            ],
+            "A_k": 0.25
+          },
+          "south": {
+            "rows": [
+              2,
+              5
+            ],
+            "A_k": 0.0
+          }
+        }
+      },
+      "pairs": [
+        {
+          "row": 1,
+          "start": [
+            1,
+            1
+          ],
+          "goal": [
+            1,
+            9
+          ],
+          "shorter_route": "north",
+          "is_primary_pair": true,
+          "S_in": 0.0,
+          "sampled": {
+            "rollouts": 10,
+            "successes": 1,
+            "sampled_success_rate": 0.1,
+            "route_attempts": {
+              "north": 3,
+              "south": 4,
+              "neither": 3
+            },
+            "route_successes": {
+              "north": 0,
+              "south": 1
+            },
+            "Rep": null,
+            "Rep_qualifies": false,
+            "Rep_bootstrap_95": null,
+            "Rep_excluded_as_zero": 0.0,
+            "minority_route": "north",
+            "minority_route_success_rate": 0.0,
+            "route_class_counts": {
+              "0.05": 1,
+              "0.1": 1,
+              "0.2": 1
+            },
+            "route_entropy_nats": -0.0,
+            "per_route_quality": {
+              "north": {
+                "attempts": 3,
+                "successes": 0,
+                "success_rate_given_route": 0.0,
+                "first_success_actions_mean": null,
+                "first_success_seconds_mean": null
+              },
+              "south": {
+                "attempts": 4,
+                "successes": 1,
+                "success_rate_given_route": 0.25,
+                "first_success_actions_mean": 95.0,
+                "first_success_seconds_mean": 9.5
+              }
+            }
+          },
+          "P1": {
+            "wall": [
+              1,
+              5
+            ],
+            "A_0": 0.0,
+            "best_of_m": {
+              "m": 5,
+              "groups": 2,
+              "successful_groups": 0,
+              "success_rate": 0.0
+            },
+            "adaptation": {
+              "A_k": 0.0,
+              "status": "standin_no_parameter_updates"
+            }
+          },
+          "P1_own": {
+            "blocked_route": "north",
+            "wall": [
+              1,
+              5
+            ],
+            "greedy_route_counts": {
+              "north": 1,
+              "south": 1
+            },
+            "A_k": 0.0,
+            "status": "standin_no_parameter_updates"
+          }
+        },
+        {
+          "row": 2,
+          "start": [
+            2,
+            1
+          ],
+          "goal": [
+            2,
+            9
+          ],
+          "shorter_route": "north",
+          "is_primary_pair": true,
+          "S_in": 0.0,
+          "sampled": {
+            "rollouts": 10,
+            "successes": 0,
+            "sampled_success_rate": 0.0,
+            "route_attempts": {
+              "north": 4,
+              "south": 4,
+              "neither": 2
+            },
+            "route_successes": {
+              "north": 0,
+              "south": 0
+            },
+            "Rep": null,
+            "Rep_qualifies": false,
+            "Rep_bootstrap_95": null,
+            "Rep_excluded_as_zero": 0.0,
+            "minority_route": null,
+            "minority_route_success_rate": 0.0,
+            "route_class_counts": {
+              "0.05": 0,
+              "0.1": 0,
+              "0.2": 0
+            },
+            "route_entropy_nats": null,
+            "per_route_quality": {
+              "north": {
+                "attempts": 4,
+                "successes": 0,
+                "success_rate_given_route": 0.0,
+                "first_success_actions_mean": null,
+                "first_success_seconds_mean": null
+              },
+              "south": {
+                "attempts": 4,
+                "successes": 0,
+                "success_rate_given_route": 0.0,
+                "first_success_actions_mean": null,
+                "first_success_seconds_mean": null
+              }
+            }
+          },
+          "P1": {
+            "wall": [
+              1,
+              5
+            ],
+            "A_0": 0.0,
+            "best_of_m": {
+              "m": 5,
+              "groups": 2,
+              "successful_groups": 0,
+              "success_rate": 0.0
+            },
+            "adaptation": {
+              "A_k": 0.0,
+              "status": "standin_no_parameter_updates"
+            }
+          },
+          "P1_own": {
+            "blocked_route": "south",
+            "wall": [
+              5,
+              5
+            ],
+            "greedy_route_counts": {
+              "north": 0,
+              "south": 1
+            },
+            "A_k": 0.0,
+            "status": "standin_no_parameter_updates"
+          }
+        },
+        {
+          "row": 3,
+          "start": [
+            3,
+            1
+          ],
+          "goal": [
+            3,
+            9
+          ],
+          "shorter_route": null,
+          "is_primary_pair": false,
+          "S_in": 0.0,
+          "sampled": {
+            "rollouts": 10,
+            "successes": 0,
+            "sampled_success_rate": 0.0,
+            "route_attempts": {
+              "north": 4,
+              "south": 1,
+              "neither": 5
+            },
+            "route_successes": {
+              "north": 0,
+              "south": 0
+            },
+            "Rep": null,
+            "Rep_qualifies": false,
+            "Rep_bootstrap_95": null,
+            "Rep_excluded_as_zero": 0.0,
+            "minority_route": null,
+            "minority_route_success_rate": 0.0,
+            "route_class_counts": {
+              "0.05": 0,
+              "0.1": 0,
+              "0.2": 0
+            },
+            "route_entropy_nats": null,
+            "per_route_quality": {
+              "north": {
+                "attempts": 4,
+                "successes": 0,
+                "success_rate_given_route": 0.0,
+                "first_success_actions_mean": null,
+                "first_success_seconds_mean": null
+              },
+              "south": {
+                "attempts": 1,
+                "successes": 0,
+                "success_rate_given_route": 0.0,
+                "first_success_actions_mean": null,
+                "first_success_seconds_mean": null
+              }
+            }
+          }
+        },
+        {
+          "row": 4,
+          "start": [
+            4,
+            1
+          ],
+          "goal": [
+            4,
+            9
+          ],
+          "shorter_route": "south",
+          "is_primary_pair": true,
+          "S_in": 0.0,
+          "sampled": {
+            "rollouts": 10,
+            "successes": 0,
+            "sampled_success_rate": 0.0,
+            "route_attempts": {
+              "north": 2,
+              "south": 6,
+              "neither": 2
+            },
+            "route_successes": {
+              "north": 0,
+              "south": 0
+            },
+            "Rep": null,
+            "Rep_qualifies": false,
+            "Rep_bootstrap_95": null,
+            "Rep_excluded_as_zero": 0.0,
+            "minority_route": null,
+            "minority_route_success_rate": 0.0,
+            "route_class_counts": {
+              "0.05": 0,
+              "0.1": 0,
+              "0.2": 0
+            },
+            "route_entropy_nats": null,
+            "per_route_quality": {
+              "north": {
+                "attempts": 2,
+                "successes": 0,
+                "success_rate_given_route": 0.0,
+                "first_success_actions_mean": null,
+                "first_success_seconds_mean": null
+              },
+              "south": {
+                "attempts": 6,
+                "successes": 0,
+                "success_rate_given_route": 0.0,
+                "first_success_actions_mean": null,
+                "first_success_seconds_mean": null
+              }
+            }
+          },
+          "P1": {
+            "wall": [
+              5,
+              5
+            ],
+            "A_0": 0.0,
+            "best_of_m": {
+              "m": 5,
+              "groups": 2,
+              "successful_groups": 0,
+              "success_rate": 0.0
+            },
+            "adaptation": {
+              "A_k": 0.0,
+              "status": "standin_no_parameter_updates"
+            }
+          },
+          "P1_own": {
+            "blocked_route": "north",
+            "wall": [
+              1,
+              5
+            ],
+            "greedy_route_counts": {
+              "north": 1,
+              "south": 0
+            },
+            "A_k": 0.5,
+            "status": "standin_no_parameter_updates"
+          }
+        },
+        {
+          "row": 5,
+          "start": [
+            5,
+            1
+          ],
+          "goal": [
+            5,
+            9
+          ],
+          "shorter_route": "south",
+          "is_primary_pair": true,
+          "S_in": 0.0,
+          "sampled": {
+            "rollouts": 10,
+            "successes": 0,
+            "sampled_success_rate": 0.0,
+            "route_attempts": {
+              "north": 4,
+              "south": 4,
+              "neither": 2
+            },
+            "route_successes": {
+              "north": 0,
+              "south": 0
+            },
+            "Rep": null,
+            "Rep_qualifies": false,
+            "Rep_bootstrap_95": null,
+            "Rep_excluded_as_zero": 0.0,
+            "minority_route": null,
+            "minority_route_success_rate": 0.0,
+            "route_class_counts": {
+              "0.05": 0,
+              "0.1": 0,
+              "0.2": 0
+            },
+            "route_entropy_nats": null,
+            "per_route_quality": {
+              "north": {
+                "attempts": 4,
+                "successes": 0,
+                "success_rate_given_route": 0.0,
+                "first_success_actions_mean": null,
+                "first_success_seconds_mean": null
+              },
+              "south": {
+                "attempts": 4,
+                "successes": 0,
+                "success_rate_given_route": 0.0,
+                "first_success_actions_mean": null,
+                "first_success_seconds_mean": null
+              }
+            }
+          },
+          "P1": {
+            "wall": [
+              5,
+              5
+            ],
+            "A_0": 0.0,
+            "best_of_m": {
+              "m": 5,
+              "groups": 2,
+              "successful_groups": 0,
+              "success_rate": 0.0
+            },
+            "adaptation": {
+              "A_k": 0.0,
+              "status": "standin_no_parameter_updates"
+            }
+          },
+          "P1_own": {
+            "blocked_route": "south",
+            "wall": [
+              5,
+              5
+            ],
+            "greedy_route_counts": {
+              "north": 0,
+              "south": 2
+            },
+            "A_k": 0.0,
+            "status": "standin_no_parameter_updates"
+          }
+        }
+      ],
+      "rollouts": [
+        {
+          "seed": 2343329615,
+          "row": 1,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.802562874106119,
+          "path_length": 23.78204822392826,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2984012532,
+          "row": 1,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 0.9098788509064765,
+          "path_length": 25.451133487270877,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 601672163,
+          "row": 1,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.2233038403066345,
+          "path_length": 21.93191505094497,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1945690056,
+          "row": 1,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": 36,
+          "steps": 100,
+          "reward_sum": 2.0,
+          "final_goal_distance": 2.9237675828158243,
+          "path_length": 29.77397869718779,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2600080901,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": true,
+          "first_success_step": 95,
+          "steps": 100,
+          "reward_sum": 6.0,
+          "final_goal_distance": 0.41697665342134427,
+          "path_length": 27.00919222413953,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2651113622,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 9.454606236362125,
+          "path_length": 31.086998556495963,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1194754119,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": 45,
+          "steps": 100,
+          "reward_sum": 1.0,
+          "final_goal_distance": 6.003817518381947,
+          "path_length": 30.532646204183337,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3737559782,
+          "row": 1,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": 80,
+          "steps": 100,
+          "reward_sum": 5.0,
+          "final_goal_distance": 2.9023606739808674,
+          "path_length": 21.924593055334835,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1326257699,
+          "row": 1,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 8.330433614609802,
+          "path_length": 21.702146072596815,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2037180407,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.004216972445421,
+          "path_length": 29.044662781042693,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 642052927,
+          "row": 1,
+          "sampled": false,
+          "route": "south",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 0.580598208731647,
+          "path_length": 28.200316924628474,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 3793355941,
+          "row": 1,
+          "sampled": false,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.92019709601205,
+          "path_length": 25.441740048230272,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 4037914823,
+          "row": 1,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 8.433269423271053,
+          "path_length": 28.34723291763992,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 2665632690,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 5.695750199665927,
+          "path_length": 25.51000379256198,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 4116349875,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 8.528495408063867,
+          "path_length": 29.68145284330124,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 1579005372,
+          "row": 1,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 6.682504857307154,
+          "path_length": 23.52903063907102,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 686373649,
+          "row": 1,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 6.504214247865194,
+          "path_length": 24.09794735121799,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 3397833000,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 3.5085924022043753,
+          "path_length": 29.333780636867214,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 3218038064,
+          "row": 1,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 8.435982079590001,
+          "path_length": 21.661922111970092,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 1781962282,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 3.551242962332101,
+          "path_length": 28.504212572055806,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 4294825063,
+          "row": 1,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.586857520140118,
+          "path_length": 22.92143214781563,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 3899647141,
+          "row": 1,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 0.9191519516106783,
+          "path_length": 28.228686377177958,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 4230583945,
+          "row": 2,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 5.39695702171514,
+          "path_length": 22.871740729694856,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2247411002,
+          "row": 2,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 2.5168686001505503,
+          "path_length": 32.28649209978448,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3593124081,
+          "row": 2,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.974343755389167,
+          "path_length": 32.9862415223419,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 4201089479,
+          "row": 2,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": 30,
+          "steps": 100,
+          "reward_sum": 2.0,
+          "final_goal_distance": 2.9749146617979654,
+          "path_length": 32.24060131187676,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 681227916,
+          "row": 2,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 0.9259382434158363,
+          "path_length": 23.111171250863205,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3070009298,
+          "row": 2,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 3.165635341328827,
+          "path_length": 25.90197805797223,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 243913401,
+          "row": 2,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 0.9269604976563802,
+          "path_length": 30.626827925957972,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 4240033142,
+          "row": 2,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.597832412759359,
+          "path_length": 25.59516032721222,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3176070098,
+          "row": 2,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.297919758096438,
+          "path_length": 24.673939086842047,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1543737144,
+          "row": 2,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": 63,
+          "steps": 100,
+          "reward_sum": 12.0,
+          "final_goal_distance": 4.169997209208735,
+          "path_length": 29.806696372765376,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 4004865298,
+          "row": 2,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.74926577146221,
+          "path_length": 23.35218936038943,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 21717714,
+          "row": 2,
+          "sampled": false,
+          "route": "south",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 8.388000199835327,
+          "path_length": 27.073593883817466,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 164283684,
+          "row": 2,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 5.8768450788476585,
+          "path_length": 29.546551783683327,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 2788747230,
+          "row": 2,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 5.925225235341129,
+          "path_length": 25.934708560720757,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 874646829,
+          "row": 2,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.2051973774217215,
+          "path_length": 33.26374123862036,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 952819371,
+          "row": 2,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 8.733478815775237,
+          "path_length": 27.117871096565647,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 472152342,
+          "row": 2,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 8.07624353293892,
+          "path_length": 26.304756807511513,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 2512387353,
+          "row": 2,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 8.359775280750123,
+          "path_length": 22.800387430295743,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 1881029972,
+          "row": 2,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 8.057368762888444,
+          "path_length": 23.051200580328835,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 1437606189,
+          "row": 2,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.866682957145668,
+          "path_length": 24.76820872581679,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 1965711158,
+          "row": 2,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.890023833542533,
+          "path_length": 20.948656055125937,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 2147962278,
+          "row": 2,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.607044630714812,
+          "path_length": 25.60582665259744,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 2585106437,
+          "row": 3,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.198543007374644,
+          "path_length": 24.59290228063257,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1033596973,
+          "row": 3,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.279851472986678,
+          "path_length": 25.45003842074225,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2715246027,
+          "row": 3,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.643266282065519,
+          "path_length": 24.246576448454196,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1886316681,
+          "row": 3,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": 73,
+          "steps": 100,
+          "reward_sum": 4.0,
+          "final_goal_distance": 1.5104010303599267,
+          "path_length": 27.419546858470692,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2131973971,
+          "row": 3,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 8.419708592655178,
+          "path_length": 29.819265419557713,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1578356600,
+          "row": 3,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 8.533367554168501,
+          "path_length": 27.980173481606972,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 4269696572,
+          "row": 3,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 6.890525840882779,
+          "path_length": 21.97989634881121,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1876168125,
+          "row": 3,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.46643717108362,
+          "path_length": 22.93640881254123,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3476048495,
+          "row": 3,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 8.448866626094011,
+          "path_length": 32.84047052176425,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1951539827,
+          "row": 3,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 5.033843528737117,
+          "path_length": 21.181392791340365,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2487173954,
+          "row": 3,
+          "sampled": false,
+          "route": "south",
+          "success": false,
+          "first_success_step": 96,
+          "steps": 100,
+          "reward_sum": 2.0,
+          "final_goal_distance": 1.321212366621076,
+          "path_length": 27.348331690973357,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 2613866545,
+          "row": 3,
+          "sampled": false,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.170180096222074,
+          "path_length": 28.455686338814814,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 3156447764,
+          "row": 4,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 5.287591772527411,
+          "path_length": 24.6098329572218,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3839019896,
+          "row": 4,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": 89,
+          "steps": 100,
+          "reward_sum": 6.0,
+          "final_goal_distance": 3.132293284833446,
+          "path_length": 28.07580801986147,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 573270613,
+          "row": 4,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.852792646509635,
+          "path_length": 30.48200334382877,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2674342872,
+          "row": 4,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 9.185499055679673,
+          "path_length": 22.081908838910856,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 4082539243,
+          "row": 4,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": 69,
+          "steps": 100,
+          "reward_sum": 9.0,
+          "final_goal_distance": 6.2595537746683325,
+          "path_length": 26.488803828955085,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 574963832,
+          "row": 4,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": 61,
+          "steps": 100,
+          "reward_sum": 3.0,
+          "final_goal_distance": 1.4624275007953813,
+          "path_length": 28.858343940668586,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3081140328,
+          "row": 4,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": 80,
+          "steps": 100,
+          "reward_sum": 1.0,
+          "final_goal_distance": 2.2189222002407023,
+          "path_length": 28.190601714822723,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 150995071,
+          "row": 4,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": 24,
+          "steps": 100,
+          "reward_sum": 10.0,
+          "final_goal_distance": 0.8316060661587525,
+          "path_length": 30.852102404519332,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2903150222,
+          "row": 4,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": 81,
+          "steps": 100,
+          "reward_sum": 3.0,
+          "final_goal_distance": 1.0092007667022482,
+          "path_length": 21.614849826331202,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 952122230,
+          "row": 4,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": 69,
+          "steps": 100,
+          "reward_sum": 3.0,
+          "final_goal_distance": 2.9184479840251014,
+          "path_length": 27.311084625895017,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3278482144,
+          "row": 4,
+          "sampled": false,
+          "route": "north",
+          "success": false,
+          "first_success_step": 83,
+          "steps": 100,
+          "reward_sum": 2.0,
+          "final_goal_distance": 3.2513337468357184,
+          "path_length": 26.90863803032041,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 2132026004,
+          "row": 4,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.9237048823736576,
+          "path_length": 26.512607588703197,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 1815145873,
+          "row": 4,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 3.2807986140253207,
+          "path_length": 26.26699238607921,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 4176689427,
+          "row": 4,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.515369741492743,
+          "path_length": 27.64764299446224,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 1306010032,
+          "row": 4,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.761809255452954,
+          "path_length": 25.59567970389492,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 4177006286,
+          "row": 4,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 3.0869437463206113,
+          "path_length": 26.276054198705662,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 2925743037,
+          "row": 4,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 5.614994820048692,
+          "path_length": 22.034472359588847,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 3803769340,
+          "row": 4,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 2.218264456065712,
+          "path_length": 23.989327027060682,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 2608857339,
+          "row": 4,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.878856589650997,
+          "path_length": 25.81093274041508,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 708388589,
+          "row": 4,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.931967015385042,
+          "path_length": 25.149554283658762,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 2253470769,
+          "row": 4,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 8.538039537959406,
+          "path_length": 26.49765872793461,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 3716872418,
+          "row": 4,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.885353155707304,
+          "path_length": 24.866447817941637,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 3812701017,
+          "row": 5,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.474482157674533,
+          "path_length": 24.951583138002512,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2527391128,
+          "row": 5,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 8.644964465759532,
+          "path_length": 22.110918269847776,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 1573363745,
+          "row": 5,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.12181778293313,
+          "path_length": 26.636951965437646,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 807517867,
+          "row": 5,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": 60,
+          "steps": 100,
+          "reward_sum": 6.0,
+          "final_goal_distance": 5.5191415700680615,
+          "path_length": 27.794908295510606,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2670774830,
+          "row": 5,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": 55,
+          "steps": 100,
+          "reward_sum": 5.0,
+          "final_goal_distance": 6.191872775992264,
+          "path_length": 26.334414259821326,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2035026412,
+          "row": 5,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": 54,
+          "steps": 100,
+          "reward_sum": 7.0,
+          "final_goal_distance": 7.202845129661826,
+          "path_length": 24.653079696790446,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3373286958,
+          "row": 5,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.486779981581711,
+          "path_length": 25.71053597022764,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2078988032,
+          "row": 5,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 9.017160365715586,
+          "path_length": 21.6391528275384,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3887522596,
+          "row": 5,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": 27,
+          "steps": 100,
+          "reward_sum": 4.0,
+          "final_goal_distance": 4.39116588441868,
+          "path_length": 28.23341875212638,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 3348574122,
+          "row": 5,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": 70,
+          "steps": 100,
+          "reward_sum": 1.0,
+          "final_goal_distance": 1.306526732773085,
+          "path_length": 26.30322305841811,
+          "phase": "unblocked_sampled",
+          "wall": null
+        },
+        {
+          "seed": 2744465018,
+          "row": 5,
+          "sampled": false,
+          "route": "south",
+          "success": false,
+          "first_success_step": 62,
+          "steps": 100,
+          "reward_sum": 6.0,
+          "final_goal_distance": 8.134853811278571,
+          "path_length": 29.859493953202474,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 3498913050,
+          "row": 5,
+          "sampled": false,
+          "route": "south",
+          "success": false,
+          "first_success_step": 80,
+          "steps": 100,
+          "reward_sum": 3.0,
+          "final_goal_distance": 3.028290557542982,
+          "path_length": 28.739493718098554,
+          "phase": "unblocked_greedy",
+          "wall": null
+        },
+        {
+          "seed": 2397719618,
+          "row": 5,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.954379817459283,
+          "path_length": 27.153709443968637,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 3999610142,
+          "row": 5,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 6.051774928826206,
+          "path_length": 24.84666439156349,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 427684598,
+          "row": 5,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.807989718160332,
+          "path_length": 24.738124566698655,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 3899640903,
+          "row": 5,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 0.7822335000572324,
+          "path_length": 30.384724165252575,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 2279796203,
+          "row": 5,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 5.214066231590674,
+          "path_length": 23.960312919727972,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 1509628182,
+          "row": 5,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 6.030637067979398,
+          "path_length": 25.120974108833796,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 167443480,
+          "row": 5,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.194477747840641,
+          "path_length": 24.268256038382788,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 2101598098,
+          "row": 5,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 6.109829342537017,
+          "path_length": 27.21916418786032,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 3805305770,
+          "row": 5,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": 84,
+          "steps": 100,
+          "reward_sum": 4.0,
+          "final_goal_distance": 2.2986032992205128,
+          "path_length": 27.84468805818822,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 1768984257,
+          "row": 5,
+          "sampled": true,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 5.473953704636455,
+          "path_length": 29.437583246601854,
+          "phase": "P1_zero_shot_sampled",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 3881192529,
+          "row": 5,
+          "sampled": true,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 8.158790587028511,
+          "path_length": 28.35953457477806,
+          "wall": [
+            5,
+            5
+          ],
+          "phase": "P1_adaptation_collection"
+        },
+        {
+          "seed": 2484377166,
+          "row": 1,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 8.172511731093813,
+          "path_length": 22.64270051927112,
+          "phase": "P1_post_adaptation_greedy",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 3576888843,
+          "row": 1,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 9.293302042640251,
+          "path_length": 23.787030576068652,
+          "phase": "P1_post_adaptation_greedy",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 1069653685,
+          "row": 2,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 5.815472189969771,
+          "path_length": 31.873287219627276,
+          "phase": "P1_post_adaptation_greedy",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 4020148346,
+          "row": 2,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.946377091742789,
+          "path_length": 21.72786420469255,
+          "phase": "P1_post_adaptation_greedy",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 2329620779,
+          "row": 4,
+          "sampled": false,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 5.835536131600396,
+          "path_length": 29.275858686439896,
+          "phase": "P1_post_adaptation_greedy",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 2745060557,
+          "row": 4,
+          "sampled": false,
+          "route": "north",
+          "success": false,
+          "first_success_step": 97,
+          "steps": 100,
+          "reward_sum": 3.0,
+          "final_goal_distance": 0.8833659403057262,
+          "path_length": 26.857357435397454,
+          "phase": "P1_post_adaptation_greedy",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 2471221879,
+          "row": 5,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 7.738491401917648,
+          "path_length": 23.994874163823496,
+          "phase": "P1_post_adaptation_greedy",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 1566576296,
+          "row": 5,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 9.21875587334758,
+          "path_length": 27.243792707140496,
+          "phase": "P1_post_adaptation_greedy",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 966848758,
+          "row": 4,
+          "sampled": true,
+          "route": "south",
+          "success": false,
+          "first_success_step": 58,
+          "steps": 100,
+          "reward_sum": 3.0,
+          "final_goal_distance": 7.629000775246262,
+          "path_length": 30.283593944565183,
+          "wall": [
+            1,
+            5
+          ],
+          "phase": "P1_own_adaptation_collection"
+        },
+        {
+          "seed": 3331859726,
+          "row": 1,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 8.033424041866251,
+          "path_length": 29.032896864913816,
+          "phase": "P1_own_post_adaptation_greedy",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 3643469313,
+          "row": 1,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 6.1055237272867275,
+          "path_length": 29.58773624427578,
+          "phase": "P1_own_post_adaptation_greedy",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 4110772426,
+          "row": 2,
+          "sampled": false,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 5.271626880703845,
+          "path_length": 27.761476851051206,
+          "phase": "P1_own_post_adaptation_greedy",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 1711488554,
+          "row": 2,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 6.207027697462683,
+          "path_length": 27.065535515899615,
+          "phase": "P1_own_post_adaptation_greedy",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 746780713,
+          "row": 4,
+          "sampled": false,
+          "route": "neither",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 6.708087884943095,
+          "path_length": 28.74167163478389,
+          "phase": "P1_own_post_adaptation_greedy",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 3858714279,
+          "row": 4,
+          "sampled": false,
+          "route": "south",
+          "success": true,
+          "first_success_step": 33,
+          "steps": 100,
+          "reward_sum": 3.0,
+          "final_goal_distance": 0.41140936362815905,
+          "path_length": 26.351816799785162,
+          "phase": "P1_own_post_adaptation_greedy",
+          "wall": [
+            1,
+            5
+          ]
+        },
+        {
+          "seed": 1822158621,
+          "row": 5,
+          "sampled": false,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 4.539602305707211,
+          "path_length": 24.72086810206798,
+          "phase": "P1_own_post_adaptation_greedy",
+          "wall": [
+            5,
+            5
+          ]
+        },
+        {
+          "seed": 2619461349,
+          "row": 5,
+          "sampled": false,
+          "route": "north",
+          "success": false,
+          "first_success_step": null,
+          "steps": 100,
+          "reward_sum": 0.0,
+          "final_goal_distance": 2.2640430028222465,
+          "path_length": 25.96410179271882,
+          "phase": "P1_own_post_adaptation_greedy",
+          "wall": [
+            5,
+            5
+          ]
+        }
+      ],
+      "adaptation_runs": {
+        "P1": {
+          "status": "standin_no_parameter_updates",
+          "environment_steps": 100,
+          "gradient_steps": 0,
+          "task_rows": [
+            1,
+            2,
+            4,
+            5
+          ],
+          "buffer_initialisation": "empty_required_by_adapter_contract"
+        },
+        "P1_own": {
+          "status": "standin_no_parameter_updates",
+          "environment_steps": 100,
+          "gradient_steps": 0,
+          "task_rows": [
+            1,
+            2,
+            4,
+            5
+          ],
+          "buffer_initialisation": "empty_required_by_adapter_contract"
+        }
+      },
+      "environment_steps": 11800,
+      "elapsed_seconds": 2.1595591660006903,
+      "limitations": [
+        "No neural learner is implemented. Stand-in adaptation performs zero updates.",
+        "Random policy has no greedy action: its ordinary random actions fill greedy evaluation slots.",
+        "P1-own counts all greedy route crossings; ties choose the shorter route; no crossings is undefined.",
+        "Best-of-m uses disjoint groups of zero-shot attempts, sharing data with A_0.",
+        "M2, training exposure diagnostics, S_out and P2/P3 are outside this ring-task suite."
+      ]
+    }
+  ]
+}
