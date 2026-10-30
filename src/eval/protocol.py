@@ -51,6 +51,9 @@ class EvaluationConfig:
     bootstrap_resamples: int = 2000
     seed: int = 20261028
     adaptation_steps: int = 16 * EPISODE_STEPS  # total across blocked pairs; placeholder until k is set in the pilot
+    # Gradient steps per adaptation environment step; must equal the training ratio
+    # (spec section 8). Learned adapters are checked against it; the stand-in uses 0.
+    adaptation_updates_per_env_step: float = 1.0
 
     def __post_init__(self):
         if self.horizon != EPISODE_STEPS:
@@ -68,6 +71,9 @@ class EvaluationConfig:
         if (self.adaptation_steps < 0
                 or self.adaptation_steps % self.horizon):
             raise ValueError("adaptation budget must contain whole episodes")
+        updates_per_episode = self.adaptation_updates_per_env_step * self.horizon
+        if self.adaptation_updates_per_env_step < 0 or updates_per_episode != round(updates_per_episode):
+            raise ValueError("updates per environment step must give whole updates per episode")
 
 
 def episode_seed(base, row, phase, index):
