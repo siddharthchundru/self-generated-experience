@@ -7,10 +7,12 @@ checks. Runtime uses measured CPU rates plus explicit overhead scenarios.
 
 from dataclasses import asdict, dataclass
 
+from episode import EPISODE_STEPS
+
 
 @dataclass(frozen=True)
 class ComputeAssumptions:
-    horizon: int = 100
+    horizon: int = EPISODE_STEPS
     updates_per_env_step: float = 1.0
     warmup_updates: int = 10000
     demo_episodes: int = 140  # 20 per pair, balanced by route; scenario only
@@ -23,7 +25,7 @@ class ComputeAssumptions:
     main_evaluation_checkpoints: int = 1  # final; shared pretraining counted separately
     tuning_trials_per_condition: int = 6
     tuning_seeds: int = 3
-    tuning_budget: int = 100000
+    tuning_budget: int = 99960  # whole 60-step episodes (audit of 30 Oct, B2)
     capacity_updates_per_learner_maze: int = 100000
     capacity_demo_episodes: int = 1840  # replaced by actual all-pairs M1+M2 count in CLI
     capacity_eval_episodes_per_learner_maze: int = 200
@@ -31,6 +33,8 @@ class ComputeAssumptions:
 
 def counts(assumptions, budget, seeds):
     a = assumptions
+    if a.horizon != EPISODE_STEPS:
+        raise ValueError(f"compute horizon must be the project-wide T = {EPISODE_STEPS}")
     if budget <= 0 or budget % a.horizon or seeds <= 0:
         raise ValueError("positive seeds and an episode-aligned budget are required")
     if not 0 <= a.adaptation_fraction <= 1:
@@ -38,8 +42,8 @@ def counts(assumptions, budget, seeds):
     r, T = a.updates_per_env_step, a.horizon
     weighted = 5 if a.include_expert_topup else 4
     main = weighted+2  # C3-plain and C4-plain; no re-learning for these two
-    # Round each k upward to whole episodes; report the realised budget.
-    k = int(-(-budget*a.adaptation_fraction//T))*T
+    # Round each k DOWN to whole episodes (audit of 30 Oct, B2); report the realised budget.
+    k = int(budget*a.adaptation_fraction//T)*T
     unblocked_eval = 7*(a.sampled_rollouts+a.greedy_rollouts)*T
     full_eval = unblocked_eval+6*(a.sampled_rollouts+2*a.greedy_rollouts)*T
     components = []
@@ -72,7 +76,7 @@ def counts(assumptions, budget, seeds):
         inference=a.pilot_seeds*4*(budget+unblocked_eval),
         updates=a.pilot_seeds*(4*budget*r+2*a.warmup_updates),
         selections=a.pilot_seeds*2*budget/T)
-    calibration_k = sum(int(-(-budget*f//T))*T for f in (0.05, 0.10, 0.20))
+    calibration_k = sum(int(budget*f//T)*T for f in (0.05, 0.10, 0.20))
     add("pilot: additional C0 P1 k-grid calibration", random_env=a.pilot_seeds*(calibration_k+3*6*a.greedy_rollouts*T),
         inference=a.pilot_seeds*(calibration_k+3*6*a.greedy_rollouts*T),
         updates=a.pilot_seeds*calibration_k*r)

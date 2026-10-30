@@ -7,6 +7,7 @@ depends on the task geometry, never on a policy's observed performance.
 from dataclasses import dataclass
 
 from envs.mazes import RINGS
+from episode import EPISODE_STEPS
 
 
 @dataclass(frozen=True)
@@ -42,16 +43,21 @@ def task_pairs(maze="M1"):
 @dataclass(frozen=True)
 class EvaluationConfig:
     maze: str = "M1"
-    horizon: int = 100  # Stage 1 default, NOT the Stage 2 feasibility/pilot choice.
+    horizon: int = EPISODE_STEPS  # project-wide T; any other value is refused below
     sampled_rollouts: int = 100
     greedy_rollouts: int = 20
     minimum_successes: int = 20
     best_of_m: int = 5  # provisional; recorded in every report
     bootstrap_resamples: int = 2000
     seed: int = 20261028
-    adaptation_steps: int = 1000  # total across blocked task pairs, not per pair
+    adaptation_steps: int = 16 * EPISODE_STEPS  # total across blocked pairs; placeholder until k is set in the pilot
+    # Gradient steps per adaptation environment step; must equal the training ratio
+    # (spec section 8). Learned adapters are checked against it; the stand-in uses 0.
+    adaptation_updates_per_env_step: float = 1.0
 
     def __post_init__(self):
+        if self.horizon != EPISODE_STEPS:
+            raise ValueError(f"evaluation horizon must be the project-wide T = {EPISODE_STEPS}")
         if self.maze not in RINGS:
             raise ValueError("ring evaluation supports M0 and M1, not M2")
         values = (self.horizon, self.sampled_rollouts, self.greedy_rollouts,
@@ -65,6 +71,9 @@ class EvaluationConfig:
         if (self.adaptation_steps < 0
                 or self.adaptation_steps % self.horizon):
             raise ValueError("adaptation budget must contain whole episodes")
+        updates_per_episode = self.adaptation_updates_per_env_step * self.horizon
+        if self.adaptation_updates_per_env_step < 0 or updates_per_episode != round(updates_per_episode):
+            raise ValueError("updates per environment step must give whole updates per episode")
 
 
 def episode_seed(base, row, phase, index):

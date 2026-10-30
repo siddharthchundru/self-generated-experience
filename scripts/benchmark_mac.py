@@ -2,6 +2,8 @@
 
 Run alone (not beside tests or evaluation): python scripts/benchmark_mac.py
 PyTorch is benchmark-only, not an implementation of the Stage 2 learner.
+Records the commit and whether the tree was dirty; writing into results/ needs a
+clean tree or --allow-dirty (audit of 28 Oct, S4).
 The synthetic weighted classification update uses the specified architecture;
 it excludes a real replay sampler, logging and framework integration overhead.
 """
@@ -23,7 +25,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from envs.mazes import M1
 from envs.pointmaze import make_env
+from episode import EPISODE_STEPS
 from expert import run_episode
+from provenance import guard_results_write
 
 
 def timed(fn, count):
@@ -126,15 +130,17 @@ def main():
     parser.add_argument("--env-steps", type=int, default=20000)
     parser.add_argument("--updates", type=int, default=300)
     parser.add_argument("--batch-size", type=int, default=256)
-    parser.add_argument("--horizon", type=int, default=100)
+    parser.add_argument("--horizon", type=int, default=EPISODE_STEPS)
+    parser.add_argument("--allow-dirty", action="store_true")
     parser.add_argument("--output", type=Path, default=ROOT / "results/stage1/mac_throughput.json")
     args = parser.parse_args()
+    git = guard_results_write(ROOT, args.output, args.allow_dirty)
     result = {
         "machine": {"system": platform.system(), "release": platform.release(),
                     "architecture": platform.machine(), "python": platform.python_version(),
                     "chip": sysctl("machdep.cpu.brand_string"), "memory_bytes": sysctl("hw.memsize"),
                     "physical_cores": sysctl("hw.physicalcpu"), "logical_cores": sysctl("hw.logicalcpu")},
-        "git_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+        **git,
         "source_sha256": {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
                           for folder in (ROOT/"src", ROOT/"scripts") for p in sorted(folder.rglob("*.py"))},
         "packages": {p: importlib.metadata.version(p) for p in ("numpy", "gymnasium", "gymnasium-robotics", "mujoco")},

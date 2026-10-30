@@ -1,4 +1,8 @@
-"""Check compute accounting, including C0, re-learning and two shared k budgets."""
+"""Check compute accounting, including C0, re-learning and two shared k budgets.
+
+Budgets are whole 60-step episodes: 99,960 steps is 1,666 episodes, and k at
+10% of it rounds down to 166 episodes (9,960 steps).
+"""
 
 from dataclasses import replace
 import sys
@@ -16,23 +20,23 @@ class TestComputeAccounting(unittest.TestCase):
             capacity_eval_episodes_per_learner_maze=0)
 
     def test_main_counts_include_no_interactions_for_c0(self):
-        report = counts(self.a, 100000, 1)
+        report = counts(self.a, 99960, 1)
         components = {c["name"]: c for c in report["components"]}
         practice = components["main: main practice"]
-        self.assertEqual(practice["random_dynamics_steps"]+practice["expert_steps"], 6*100000)
-        self.assertEqual(practice["gradient_updates"], 7*100000)
+        self.assertEqual(practice["random_dynamics_steps"]+practice["expert_steps"], 6*99960)
+        self.assertEqual(practice["gradient_updates"], 7*99960)
         adaptation = components["main: P1 and P1-own adaptation"]
-        self.assertEqual(adaptation["random_dynamics_steps"], 7*2*10000)  # not times six pairs
+        self.assertEqual(adaptation["random_dynamics_steps"], 7*2*9960)  # not times six pairs
         relearning = components["main: fresh-buffer re-learning"]
-        self.assertEqual(relearning["gradient_updates"], 5*(10000+100000))
+        self.assertEqual(relearning["gradient_updates"], 5*(10000+99960))
 
     def test_optional_topup_removes_one_run_and_one_relearning(self):
-        report = counts(replace(self.a, include_expert_topup=False), 100000, 1)
+        report = counts(replace(self.a, include_expert_topup=False), 99960, 1)
         self.assertEqual(report["main_conditions"], 6)
         self.assertEqual(report["relearning_conditions"], 4)
         practice = next(c for c in report["components"] if c["name"] == "main: main practice")
         self.assertEqual(practice["expert_steps"], 0)
-        self.assertEqual(practice["random_dynamics_steps"], 5*100000)
+        self.assertEqual(practice["random_dynamics_steps"], 5*99960)
 
     def test_runtime_is_sum_of_all_measured_operations(self):
         rate = {"median_per_second": 10, "slowest_per_second": 5}

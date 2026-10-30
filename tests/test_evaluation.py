@@ -2,8 +2,14 @@
 
 Analytic examples protect scientific definitions independently of the simulator.
 Small integration runs check policy isolation and one TOTAL adaptation budget.
+TestAuditInterface checks the fixes for the 28 Oct audit's findings S1 to S3:
+the suite counts adaptation steps itself, gradient steps must equal the ratio
+times k and the optimiser's own count, adaptation starts from an empty buffer
+with no data on the policy, evaluation leaves parameters unchanged, and a
+learned policy never receives the task pair or the wall.
 """
 
+import copy
 import sys
 import json
 import subprocess
@@ -16,7 +22,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from eval.metrics import best_of_m, common_pair_rep, summarise_rollouts
 from eval.policies import ExpertPolicy, RandomPolicy
 from eval.protocol import EvaluationConfig, TaskPair, episode_seed
-from eval.suite import AdaptationResult, collect, evaluate_policy, no_update_adaptation
+from episode import EPISODE_STEPS
+from eval.suite import (AdaptationResult, BudgetExhausted, NoUpdateAdapter, check_parameters_only,
+                        collect, evaluate_policy, no_update_adaptation, suite_parameter_digest)
+
+import numpy as np
+import torch
 
 
 def records(north, south, failures):
@@ -82,6 +93,10 @@ class TestProtocol(unittest.TestCase):
             EvaluationConfig(adaptation_steps=101)
         with self.assertRaises(ValueError):
             EvaluationConfig(best_of_m=3)
+        with self.assertRaises(ValueError):
+            EvaluationConfig(horizon=100)  # T is project-wide, not per evaluation
+        with self.assertRaises(ValueError):
+            EvaluationConfig(adaptation_updates_per_env_step=1/7)  # not whole updates per episode
 
     def test_phase_and_row_seeds_are_independent_and_repeatable(self):
         self.assertEqual(episode_seed(1, 2, 3, 4), episode_seed(1, 2, 3, 4))
@@ -97,7 +112,7 @@ class TestProtocol(unittest.TestCase):
 
 class TestEndToEnd(unittest.TestCase):
     config = EvaluationConfig(sampled_rollouts=10, greedy_rollouts=2, minimum_successes=2,
-                              bootstrap_resamples=50, adaptation_steps=200)
+                              bootstrap_resamples=50, adaptation_steps=3*EPISODE_STEPS)
 
     def test_real_wall_expert_and_total_adaptation_budget(self):
         report = evaluate_policy(ExpertPolicy(), self.config, no_update_adaptation)
@@ -105,11 +120,11 @@ class TestEndToEnd(unittest.TestCase):
         self.assertEqual(len(report["aggregate"]["Rep_qualifying_rows"]), 6)
         self.assertEqual(report["aggregate"]["primary_rows"], [1, 2, 3, 5, 6, 7])
         for run in report["adaptation_runs"].values():
-            self.assertEqual(run["environment_steps"], 200)  # NOT 6*200
+            self.assertEqual(run["environment_steps"], 3*EPISODE_STEPS)  # NOT 6 times that
             self.assertEqual(run["gradient_steps"], 0)
         for phase in ("P1", "P1_own"):
             collected = [r for r in report["rollouts"] if r["phase"] == phase+"_adaptation_collection"]
-            self.assertEqual(sum(r["steps"] for r in collected), 200)
+            self.assertEqual(sum(r["steps"] for r in collected), 3*EPISODE_STEPS)
         # Expert ignores the wall: greedy insists on its original shorter route.
         self.assertEqual(report["aggregate"]["A_k"], 0)
         self.assertGreater(report["aggregate"]["A_0"], 0)
@@ -124,14 +139,16 @@ class TestEndToEnd(unittest.TestCase):
         calls = []
         policy = ExpertPolicy()
 
-        def adapter(clone, tasks, config, phase):
-            self.assertIsNot(clone, policy)
-            calls.append(clone)
-            self.assertEqual(len(tasks), 6)
-            return AdaptationResult(clone, config.adaptation_steps, 0, "test_only", [])
+        recorder = NoUpdateAdapter()  # an instance, not a subclass: only the exact stand-in may skip updates
 
-        evaluate_policy(policy, self.config, adapter)
+        def adapt(clone, session, buffer):
+            calls.append(clone)
+            return NoUpdateAdapter.adapt(recorder, clone, session, buffer)
+
+        recorder.adapt = adapt
+        evaluate_policy(policy, self.config, recorder)
         self.assertEqual(len(calls), 2)
+        self.assertIsNot(calls[0], policy)
         self.assertIsNot(calls[0], calls[1])
 
     def test_m0_cli_gate_uses_its_four_primary_pairs_not_m1_six(self):
@@ -145,6 +162,250 @@ class TestEndToEnd(unittest.TestCase):
             report = json.loads(output.read_text())
             self.assertTrue(report["evaluation_pipeline_passes"])
             self.assertEqual(report["reports"][0]["aggregate"]["primary_rows"], [1, 2, 4, 5])
+
+
+class StubPolicy:
+    """A minimal learned policy: one linear layer, records every argument it receives."""
+
+    def __init__(self, name="stub"):
+        self.name = name
+        torch.manual_seed(0)
+        self.network = torch.nn.Linear(6, 2)
+
+    def start_episode(self, view, rng, sampled):
+        StubPolicy.seen.append(("start", view))
+
+        def act(current):
+            StubPolicy.seen.append(("act", current))
+            return rng.uniform(-1, 1, size=2).astype(np.float32)
+        return act
+
+    def parameter_digest(self):
+        return hash(tuple(p.detach().numpy().tobytes() for p in self.network.parameters()))
+
+
+class CountingAdapter:
+    """A learned-mode adapter that makes `steps` real optimiser steps after collecting `episodes`."""
+
+    def __init__(self, episodes, steps, report=None, ratio=1.0, return_optimizer=True):
+        self.episodes, self.steps, self.report = episodes, steps, report
+        self.updates_per_env_step, self.return_optimizer = ratio, return_optimizer
+
+    def new_buffer(self):
+        return []
+
+    def adapt(self, policy, session, buffer):
+        for _ in range(self.episodes):
+            buffer.append(session.run_episode())
+        optimizer = torch.optim.Adam(policy.network.parameters(), lr=1e-3)
+        for _ in range(self.steps):
+            optimizer.zero_grad()
+            policy.network(torch.ones(1, 6)).sum().backward()
+            optimizer.step()
+        return AdaptationResult(policy, self.steps if self.report is None else self.report,
+                                "test_learned", optimizer if self.return_optimizer else None)
+
+
+class TestAuditInterface(unittest.TestCase):
+    """Audit of 28 Oct: S1 (budgets counted by the suite), S2 (no old data, no hidden
+    updates), S3 (observation and goal only)."""
+
+    k = 2*EPISODE_STEPS
+    config = EvaluationConfig(sampled_rollouts=5, greedy_rollouts=1, minimum_successes=1,
+                              bootstrap_resamples=10, best_of_m=5, adaptation_steps=k)
+
+    def setUp(self):
+        StubPolicy.seen = []
+
+    # S3 -------------------------------------------------------------------------
+    def test_learned_policy_sees_observation_and_goal_only(self):
+        evaluate_policy(StubPolicy(), self.config, CountingAdapter(2, self.k))
+        self.assertTrue(StubPolicy.seen)
+        for kind, view in StubPolicy.seen:
+            self.assertEqual(set(view), {"observation", "desired_goal"}, kind)
+            self.assertEqual(view["observation"].shape, (4,))
+
+    def test_session_returns_trajectories_without_task_or_wall(self):
+        seen = {}
+
+        class Peek(CountingAdapter):
+            def adapt(inner, policy, session, buffer):
+                seen["public"] = {n for n in dir(session) if not n.startswith("_")}
+                trajectory = session.run_episode()
+                seen["keys"] = set(trajectory)
+                seen["shapes"] = (trajectory["observations"].shape, trajectory["actions"].shape)
+                buffer.append(trajectory)
+                buffer.append(session.run_episode())
+                return CountingAdapter.adapt(CountingAdapter(0, self.k), policy, session, buffer)
+
+        evaluate_policy(StubPolicy(), self.config, Peek(0, 0))
+        self.assertEqual(seen["keys"], {"observations", "actions", "goal"})
+        self.assertEqual(seen["shapes"], ((EPISODE_STEPS+1, 4), (EPISODE_STEPS, 2)))
+        self.assertFalse(seen["public"] & {"tasks", "pair", "wall", "walls"})
+
+    # S1 -------------------------------------------------------------------------
+    def test_adapter_cannot_exceed_the_budget(self):
+        with self.assertRaises(BudgetExhausted):
+            evaluate_policy(StubPolicy(), self.config, CountingAdapter(3, self.k))
+
+    def test_adapter_must_use_the_whole_budget(self):
+        with self.assertRaisesRegex(AssertionError, "budget must be used exactly"):
+            evaluate_policy(StubPolicy(), self.config, CountingAdapter(1, self.k))
+
+    def test_misreported_gradient_steps_are_caught(self):
+        with self.assertRaisesRegex(AssertionError, "ratio x k"):
+            evaluate_policy(StubPolicy(), self.config, CountingAdapter(2, self.k, report=123456))
+        with self.assertRaisesRegex(AssertionError, "optimiser took"):
+            evaluate_policy(StubPolicy(), self.config, CountingAdapter(2, 5, report=self.k))
+        with self.assertRaisesRegex(AssertionError, "optimiser"):
+            evaluate_policy(StubPolicy(), self.config, CountingAdapter(2, self.k, return_optimizer=False))
+
+    def test_adapter_ratio_must_match_the_configured_ratio(self):
+        with self.assertRaisesRegex(AssertionError, "update ratio"):
+            evaluate_policy(StubPolicy(), self.config, CountingAdapter(2, self.k, ratio=2.0))
+
+    def test_only_the_no_update_stand_in_may_claim_stand_in_mode(self):
+        class Liar(CountingAdapter):
+            def adapt(inner, policy, session, buffer):
+                result = CountingAdapter.adapt(inner, policy, session, buffer)
+                return AdaptationResult(policy, 0, "standin_no_parameter_updates")
+        with self.assertRaisesRegex(AssertionError, "standin_"):
+            evaluate_policy(StubPolicy(), self.config, Liar(2, 0))
+
+    def test_adapter_must_return_the_copy_it_was_given(self):
+        class Swap(CountingAdapter):
+            def adapt(inner, policy, session, buffer):
+                result = CountingAdapter.adapt(inner, policy, session, buffer)
+                result.policy = copy.deepcopy(policy)
+                return result
+        with self.assertRaisesRegex(AssertionError, "copy it was given"):
+            evaluate_policy(StubPolicy(), self.config, Swap(2, self.k))
+
+    def test_suite_counts_match_the_report(self):
+        report = evaluate_policy(StubPolicy(), self.config, CountingAdapter(2, self.k))
+        for run in report["adaptation_runs"].values():
+            if run["status"].startswith("not_run"):
+                continue
+            self.assertEqual(run["environment_steps"], self.k)
+            self.assertEqual(run["gradient_steps"], self.k)
+            self.assertEqual(run["optimizer_steps"], self.k)
+            self.assertEqual((run["buffer_size_at_start"], run["buffer_size_at_end"]), (0, 2))
+
+    # S2 -------------------------------------------------------------------------
+    def test_adaptation_buffer_must_start_empty(self):
+        class Prefilled(CountingAdapter):
+            def new_buffer(inner):
+                return ["old data"]
+        with self.assertRaisesRegex(AssertionError, "empty buffer"):
+            evaluate_policy(StubPolicy(), self.config, Prefilled(2, self.k))
+
+    def test_policy_carrying_data_or_an_optimiser_is_refused(self):
+        policy = StubPolicy()
+        policy.buffer = [np.zeros(3)]
+        with self.assertRaisesRegex(TypeError, "parameters only"):
+            check_parameters_only(policy)
+        policy = StubPolicy()
+        policy.optimizer = torch.optim.Adam(policy.network.parameters())
+        with self.assertRaisesRegex(TypeError, "parameters only"):
+            check_parameters_only(policy)
+        policy = StubPolicy()
+        policy.network.replay = [1, 2, 3]  # hidden inside the network module
+        with self.assertRaisesRegex(TypeError, "parameters only"):
+            check_parameters_only(policy)
+
+    def test_evaluation_that_changes_parameters_is_caught(self):
+        class Drifting(StubPolicy):
+            def start_episode(self, view, rng, sampled):
+                with torch.no_grad():
+                    self.network.bias.add_(1.0)
+                return StubPolicy.start_episode(self, view, rng, sampled)
+        with self.assertRaisesRegex(AssertionError, "parameters changed"):
+            evaluate_policy(Drifting(), self.config)
+
+    def test_adaptation_leaves_the_original_policy_unchanged(self):
+        policy = StubPolicy()
+        before = suite_parameter_digest(policy)
+        report = evaluate_policy(policy, self.config, CountingAdapter(2, self.k))
+        self.assertEqual(suite_parameter_digest(policy), before)
+        self.assertEqual(report["parameter_digest"], before)
+        self.assertEqual(report["policy_kind"], "learned_observation_and_goal_only")
+
+
+class TestAuditInterfaceBypasses(unittest.TestCase):
+    """Audit of 30 Oct, SF3: each bypass the auditor found is now refused."""
+
+    k = TestAuditInterface.k
+    config = TestAuditInterface.config
+
+    def setUp(self):
+        StubPolicy.seen = []
+
+    def test_step_counter_cannot_be_reset(self):
+        class Reset(CountingAdapter):
+            def adapt(inner, policy, session, buffer):
+                session.run_episode()
+                session.steps_used = 0
+        with self.assertRaises(AttributeError):
+            evaluate_policy(StubPolicy(), self.config, Reset(0, 0))
+
+    def test_stand_in_subclass_cannot_claim_stand_in_mode(self):
+        class Sneaky(NoUpdateAdapter):
+            pass
+        with self.assertRaisesRegex(AssertionError, "standin_"):
+            evaluate_policy(StubPolicy(), self.config, Sneaky())
+
+    def test_hidden_optimiser_steps_are_counted(self):
+        class Hidden(CountingAdapter):
+            def adapt(inner, policy, session, buffer):
+                result = CountingAdapter.adapt(inner, policy, session, buffer)
+                extra = torch.optim.SGD(policy.network.parameters(), lr=0.0)
+                for _ in range(5):
+                    extra.step()
+                return result
+        with self.assertRaisesRegex(AssertionError, "counted across all"):
+            evaluate_policy(StubPolicy(), self.config, Hidden(2, self.k))
+
+    def test_returned_optimiser_must_hold_the_policy_parameters(self):
+        class Elsewhere(CountingAdapter):
+            def adapt(inner, policy, session, buffer):
+                for _ in range(2):
+                    buffer.append(session.run_episode())
+                optimizer = torch.optim.Adam(torch.nn.Linear(6, 2).parameters())
+                for _ in range(self.k):
+                    optimizer.zero_grad(); optimizer.step()
+                return AdaptationResult(policy, self.k, "test_learned", optimizer)
+        with self.assertRaisesRegex(AssertionError, "exactly the adapted policy"):
+            evaluate_policy(StubPolicy(), self.config, Elsewhere(0, 0))
+
+    def test_constant_self_reported_fingerprint_does_not_hide_changes(self):
+        class Constant(StubPolicy):
+            def parameter_digest(self):
+                return "constant"
+
+            def start_episode(self, view, rng, sampled):
+                with torch.no_grad():
+                    self.network.bias.add_(1.0)
+                return StubPolicy.start_episode(self, view, rng, sampled)
+        with self.assertRaisesRegex(AssertionError, "parameters changed"):
+            evaluate_policy(Constant(), self.config)
+
+    def test_post_adaptation_evaluation_is_checked(self):
+        class DriftsAfterAdaptation(StubPolicy):
+            adapted = False
+
+            def start_episode(self, view, rng, sampled):
+                if self.adapted:
+                    with torch.no_grad():
+                        self.network.bias.add_(1.0)
+                return StubPolicy.start_episode(self, view, rng, sampled)
+
+        class MarkAdapted(CountingAdapter):
+            def adapt(inner, policy, session, buffer):
+                result = CountingAdapter.adapt(inner, policy, session, buffer)
+                policy.adapted = True
+                return result
+        with self.assertRaisesRegex(AssertionError, "post-adaptation"):
+            evaluate_policy(DriftsAfterAdaptation(), self.config, MarkAdapted(2, self.k))
 
 
 if __name__ == "__main__":
