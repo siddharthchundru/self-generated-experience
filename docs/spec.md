@@ -2,7 +2,7 @@
 
 **Working title:** What Should a Robot Practise? Goal Selection, Behavioural Repertoire and Recovery
 **Repository:** `self-generated-experience`
-**Version:** 0.10 · October 2026
+**Version:** 0.11 · October 2026
 
 This document is the reference for implementation. Every number in it is a planning default or a hypothesis, except where it says *measured*.
 
@@ -69,7 +69,8 @@ A clear null on H2 and H3, shown by equivalence tests, counts as an answer, prov
 ## 5. Learner (identical in every condition)
 
 - **Algorithm.** Weighted goal-conditioned supervised learning: GCSL ([Ghosh et al.](https://arxiv.org/abs/1912.06088)) with the *discounted relabelling weight* from weighted GCSL ([Yang et al., ICLR 2022](https://arxiv.org/abs/2202.04478)). The policy imitates its own trajectories, relabelled with goals they actually reached. Expert demonstrations and self-collected data use the same loss.
-  - Relabelling follows GCSL (Appendix A.1): trajectories are stored whole; at training time a stored trajectory, a start index t and a later goal index t′ are sampled uniformly. The relabelled goal is the *position* part of the state at t′.
+  - Relabelling follows GCSL (Appendix A.1): trajectories are stored whole; at training time a stored trajectory is drawn uniformly, then a pair of time indices t < t′ is drawn with every such pair equally likely (each of the T(T+1)/2 pairs). The relabelled goal is the *position* part of the state at t′.
+    - *Why this reading.* "A start index and a later goal index sampled uniformly" has two readings. This one is what GCSL's released code approximates: it takes the smaller and larger of two uniform draws, which is close to uniform over pairs but not exact (adjacent pairs get about 1.5 times, and pairs ending at the last state about 0.5 times, the uniform weight). The other reading, t uniform and then t′ uniform after it, would start a quarter of all examples in the last 15 steps of a 60-step episode, where the ball is usually holding at the goal, against 7% under this reading; three quarters of examples here start in the first half of the episode, where the route is chosen. The cost is a slightly smaller effective sample size under the discounted weight (about 0.82 of the batch, against 0.86).
   - Each relabelled example's loss is multiplied by γ^(t′−t), and the batch loss is the weighted sum divided by the sum of weights. Only this weight is used. Weighted GCSL's other two weights are advantage-based and need a learned value function, so they are excluded.
   - Training uses the whole buffer, as in GCSL. Details, identical in every condition:
     - *Buffer capacity:* unbounded. Nothing is evicted; the buffer always holds D0 plus every collected trajectory.
