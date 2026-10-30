@@ -3,15 +3,16 @@
 Run: python scripts/evaluate_stage1.py
 Use --quick for a smoke check; the default uses 100 sampled rollouts and the
 spec's 20-success rule. No policy learning takes place in this Stage 1 gate.
+The default output name follows the maze and --quick (evaluation.json for the
+full M1 run, evaluation-m0-smoke.json for a quick M0 run), so a smoke run never
+overwrites the full result. Writing into results/ needs a clean, committed tree
+(or --allow-dirty).
 """
 
 import argparse
 import hashlib
-import importlib.metadata
 import json
 from pathlib import Path
-import platform
-import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,14 +21,21 @@ sys.path.insert(0, str(ROOT / "src"))
 from eval.policies import ExpertPolicy, RandomPolicy
 from eval.protocol import EvaluationConfig, task_pairs
 from eval.suite import evaluate_policy, no_update_adaptation
+from provenance import guard_results_write, run_record
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--quick", action="store_true")
     parser.add_argument("--maze", choices=("M0", "M1"), default="M1")
-    parser.add_argument("--output", type=Path, default=ROOT / "results/stage1/evaluation.json")
+    parser.add_argument("--output", type=Path, default=None)
+    parser.add_argument("--allow-dirty", action="store_true",
+                        help="write into results/ even if the tree has uncommitted changes")
     args = parser.parse_args()
+    if args.output is None:
+        suffix = ("" if args.maze == "M1" else "-" + args.maze.lower()) + ("-smoke" if args.quick else "")
+        args.output = ROOT / f"results/stage1/evaluation{suffix}.json"
+    guard_results_write(ROOT, args.output, args.allow_dirty)
     config = EvaluationConfig(maze=args.maze, **({"sampled_rollouts": 10, "minimum_successes": 2,
         "greedy_rollouts": 2, "bootstrap_resamples": 200, "adaptation_steps": 60}
         if args.quick else {}))
@@ -48,12 +56,7 @@ def main():
         handcheck["trajectory_sha256"] == hashlib.sha256(
             (ROOT / "results/stage1/route_handcheck/trajectories.json").read_bytes()).hexdigest())
     result = {
-        "git_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
-        "working_tree_dirty": bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip()),
-        "source_sha256": {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
-                          for folder in (ROOT/"src", ROOT/"scripts") for p in sorted(folder.rglob("*.py"))},
-        "machine": {"system": platform.system(), "architecture": platform.machine(), "python": platform.python_version()},
-        "packages": {p: importlib.metadata.version(p) for p in ("numpy", "gymnasium", "gymnasium-robotics", "mujoco")},
+        **run_record(ROOT),
         "quick_smoke_only": args.quick, "evaluation_pipeline_passes": pipeline_passes,
         "stage1_gate_complete": False,
         "human_classifier_check_valid": handcheck_valid,
