@@ -2,7 +2,7 @@
 
 **Working title:** What Should a Robot Practise? Goal Selection, Behavioural Repertoire and Recovery
 **Repository:** `self-generated-experience`
-**Version:** 0.9 · October 2026
+**Version:** 0.10 · October 2026
 
 This document is the reference for implementation. Every number in it is a planning default or a hypothesis, except where it says *measured*.
 
@@ -184,7 +184,7 @@ All conditions share D0, the budget N, the episode length and the start distribu
 | Joint | Competence against repertoire for every condition, per seed and aggregated, so trade-offs are shown rather than argued | Secondary (reporting) |
 | Exposure | Per condition: visits to the fork states of shorter-route pairs; effective sample size of the relabelling weights; share of weight mass by maze region. For C4: the rate of reaching its chosen goals and the step at which it first reaches them, as curves over training, plotted against coverage. The mechanism in Section 6 predicts that goal-reaching on frontier goals rises ahead of coverage growth; coverage growing without that rise would mean coverage comes from elsewhere. | Diagnostic |
 | Generalisation | S_out: success in R_h. A sanity check only: frontier novelty practises there, and every collecting condition may train on held-out positions it wanders into (Section 6). | Secondary |
-| Data | Coverage of collected data | Secondary |
+| Data | Diversity of what each condition collects (`src/data_diversity.py`), logged for collected data and for the whole buffer: **spread** (share of free space visited, on 0.25-cell bins, and visitation entropy normalised by its maximum); **information added** per collected episode (bins new to the buffer, and surprise: the episode's mean −log₂ visitation probability under the buffer before it, with add-one smoothing); **route mix** (west-to-east and east-to-west midline crossings by arm, and the minority-arm share per direction, the data-side counterpart of Rep, aggregated over the data because collected segments do not belong to a task pair). Settings fixed before any practice result. | Secondary |
 | Efficiency and robustness | Path ratio; success under P2 and P3 | Secondary |
 
 **Rep, the minority-route share.**
@@ -222,6 +222,7 @@ Repertoire is measured on the policy and coverage on the data. A disagreement be
   - H4: the re-learning control. Interpretation is limited in both directions. If the advantage reproduces, the final dataset is sufficient for it; that does not show the active loop was unnecessary to collect that data. If it fails to reproduce, the advantage depends on the order and timing in which data arrived during training (the effect Ostrovski et al. describe); that does not show the data is irrelevant.
   - Minority-route success rate: paired C4 − C3, on all shorter-route pairs (it is defined even with zero successes).
 - **Exploratory: pair-level analysis with the route gap as a covariate.** The six shorter-route pairs differ in how strongly the weighting favours the shorter route (measured gaps of about 8, 16 and 25 steps; Section 5). For each pair and seed, the loss of Rep from the pretrained policy and the paired C4 − C3 difference in Rep are related to the pair's gap, as a dose-response question: does task-directed practice collapse faster, and does frontier novelty's advantage grow, where the pressure is stronger? Reported with a mixed model (seed as a random effect) or, if that is unstable, per gap level. Labelled exploratory because the pairs share one network, so a preference learned on one pair can carry over to its neighbours, and six pairs at three gap levels are too few to estimate a trend with confidence.
+- **Exploratory: does repertoire track the diversity of the data?** Within the main learner, per seed and condition, final Rep and A_k are related to the data scores (Section 8): spread, cumulative information added, and the data's minority-arm share. The question is which property of the data, if any, goes with a preserved repertoire, separating "this goal rule collects more diverse data" from "more diverse data gives a more robust policy". Correlational and confounded by condition, so it is reported within condition (across seeds) as well as across conditions; the re-learning control (H4) remains the test of whether the advantage lives in the data at all.
 - **Aggregates** reported with rliable: interquartile means, performance profiles and probability of improvement.
 - **Every run reported,** including failed ones, with wall-clock time per condition.
 
@@ -235,6 +236,6 @@ Repertoire is measured on the policy and coverage on the data. A disagreement be
 | 3 | M2 replication; C5–C7 (C7's form chosen from C7a and C7b after the first experiment); a value-based learner (SAC with HER); policy-class and D0-mix ablations; optionally a quality-diversity experience source (exploratory) | Conclusions survive a second learner family and a second maze, or the report says they don't |
 | 4 | Port to a goal-conditioned manipulation task with two solutions | Scoped later |
 
-**Scope note.** The plain-GCSL arm adds two conditions to the main runs on M1, about 40% more main runs. Each main run also carries a re-learning run (main learner only) and two adaptation runs, so total compute is several times the training cost alone. It is estimated in Stage 1 before the seed cap is frozen. γ sensitivity is pilot-only. The recovery-by-selection and per-route quality measures, the C4 goal-reaching curves and the pair-level analysis are evaluation, logging or analysis only and add no training runs.
+**Scope note.** The plain-GCSL arm adds two conditions to the main runs on M1, about 40% more main runs. Each main run also carries a re-learning run (main learner only) and two adaptation runs, so total compute is several times the training cost alone. It is estimated in Stage 1 before the seed cap is frozen. γ sensitivity is pilot-only. The recovery-by-selection and per-route quality measures, the C4 goal-reaching curves, the data-diversity scores and the pair-level analysis are evaluation, logging or analysis only and add no training runs.
 
 **Build process.** One agent implements and a separate agent audits each stage for budget mismatches, goal leakage and extra gradient updates. Audit reports are committed to `notes/audits/`.
