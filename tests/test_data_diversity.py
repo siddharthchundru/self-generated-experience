@@ -11,9 +11,12 @@ What they establish:
 3. Information added: repeating an episode adds no new bins and is less
    surprising the second time; an episode somewhere new adds bins and is
    more surprising than one where the buffer is already dense.
-4. Route mix: hand-built crossings are counted by arm and direction, and the
-   minority-arm share is computed per direction. On real expert episodes the
-   arm tallies match the route the expert was told to take.
+4. Route mix: trips across the ring are counted by arm, direction and
+   shorter/longer for that trip. The main score detects collapse: expert data
+   always on the shorter route scores 0, both routes equally 0.5, always the
+   longer route 1 (pooling midline crossings by arm scored 0.5 in all three;
+   audit of 30 Oct). A ball wobbling across the midline at a goal makes no
+   trip.
 5. Order: demonstrations cannot be added after collection has started.
 """
 
@@ -82,8 +85,8 @@ class TestSpread(unittest.TestCase):
         s = log.summary()
         self.assertGreater(s["all"]["coverage"], s["collected"]["coverage"])
         self.assertEqual(s["collected"]["states"], 5)
-        self.assertEqual(s["collected"]["crossings"]["west_to_east"]["north"], 0)
-        self.assertEqual(s["all"]["crossings"]["west_to_east"]["north"], 1)
+        self.assertEqual(s["collected"]["trips"]["west_to_east"]["north"], 0)
+        self.assertEqual(s["all"]["trips"]["west_to_east"]["north"], 1)
 
 
 class TestInformationAdded(unittest.TestCase):
@@ -110,32 +113,64 @@ class TestInformationAdded(unittest.TestCase):
 
 
 class TestRouteMix(unittest.TestCase):
-    def test_crossings_by_arm_and_direction(self):
+    def test_trips_by_arm_direction_and_length(self):
         log = DataDiversityLog("M1")
         for _ in range(3):
-            log.add_episode(through(*NORTH_W_TO_E))
+            log.add_episode(through(*NORTH_W_TO_E))      # row 4 -> row 4: a tie
         log.add_episode(through(*SOUTH_W_TO_E))
         log.add_episode(through(*reversed(SOUTH_W_TO_E)))
-        c = log.summary()["collected"]["crossings"]
-        self.assertEqual(c["west_to_east"]["north"], 3)
-        self.assertEqual(c["west_to_east"]["south"], 1)
-        self.assertAlmostEqual(c["west_to_east"]["minority_arm_share"], 0.25)
-        self.assertEqual(c["east_to_west"], {"north": 0, "south": 1, "minority_arm_share": 0.0})
+        t = log.summary()["collected"]["trips"]
+        self.assertEqual((t["west_to_east"]["north"], t["west_to_east"]["south"]), (3, 1))
+        self.assertEqual(t["west_to_east"]["tie"], 4)
+        self.assertIsNone(t["west_to_east"]["longer_arm_share"])
+        self.assertEqual(t["east_to_west"]["south"], 1)
+        self.assertEqual(t["west_to_east"]["end_rows"], {4: 4})
 
-    def test_no_crossings_is_undefined_not_zero(self):
+    def test_shorter_and_longer_from_the_trip_cells(self):
+        log = DataDiversityLog("M1")
+        upper = [(2, 1), (1, 1)] + NORTH_W_TO_E[4:10] + [(2, 7)]          # row 2, north: shorter
+        upper_long = [(2, 1), (3, 1)] + SOUTH_W_TO_E[1:12] + [(3, 7), (2, 7)]  # row 2, south: longer
+        log.add_episode(through(*upper))
+        log.add_episode(through(*upper_long))
+        t = log.summary()["collected"]["trips"]["west_to_east"]
+        self.assertEqual((t["shorter"], t["longer"]), (1, 1))
+        self.assertAlmostEqual(t["longer_arm_share"], 0.5)
+
+    def test_no_trips_is_undefined_not_zero(self):
         log = DataDiversityLog("M1")
         log.add_episode(np.tile(cell_to_xy(M1, (4, 1)), (5, 1)))
-        self.assertIsNone(log.summary()["collected"]["crossings"]["west_to_east"]["minority_arm_share"])
+        self.assertIsNone(log.summary()["collected"]["trips"]["west_to_east"]["longer_arm_share"])
 
-    def test_expert_episodes_tally_the_commanded_arm(self):
-        env = make_env("M1")
+    def test_wobble_at_a_midline_goal_is_not_a_trip(self):
         log = DataDiversityLog("M1")
-        for seed, (row, route) in enumerate([(2, "north"), (2, "south"), (6, "south")]):
-            ep = run_episode(env, M1, (row, 1), (row, 7), route=route, seed=seed)
-            log.add_episode(ep["observations"])
+        centre = cell_to_xy(M1, (1, 4))
+        wobble = centre + np.array([[0.2 * (-1) ** i, 0.0] for i in range(40)])
+        log.add_episode(wobble)
+        t = log.summary()["collected"]["trips"]["west_to_east"]
+        self.assertEqual(t["north"] + t["south"], 0)
+
+    def test_score_detects_collapse_on_expert_data(self):
+        """Seven task pairs; always shorter -> 0, half and half -> 0.5, always longer -> 1."""
+        env = make_env("M1")
+        shorter = {r: ("north" if r < 4 else "south") for r in (1, 2, 3, 5, 6, 7)}
+        longer = {r: ("south" if r < 4 else "north") for r in shorter}
+        scores = {}
+        for name, choose in {"shorter": lambda r, i: shorter[r],
+                             "mixed": lambda r, i: (shorter[r] if i % 2 else longer[r]),
+                             "longer": lambda r, i: longer[r]}.items():
+            log = DataDiversityLog("M1")
+            seed = 0
+            for i in range(4):
+                for r in (1, 2, 3, 4, 5, 6, 7):
+                    route = "north" if r == 4 and i % 2 else ("south" if r == 4 else choose(r, i))
+                    ep = run_episode(env, M1, (r, 1), (r, 7), route=route, seed=seed)
+                    seed += 1
+                    log.add_episode(ep["observations"])
+            scores[name] = log.summary()["collected"]["trips"]["west_to_east"]["longer_arm_share"]
         env.close()
-        c = log.summary()["collected"]["crossings"]["west_to_east"]
-        self.assertEqual((c["north"], c["south"]), (1, 2))
+        self.assertEqual(scores["shorter"], 0.0)
+        self.assertAlmostEqual(scores["mixed"], 0.5)
+        self.assertEqual(scores["longer"], 1.0)
 
 
 class TestOrder(unittest.TestCase):

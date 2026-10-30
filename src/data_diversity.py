@@ -26,11 +26,22 @@ Three scores, each with a different job:
      smoothing over free bins so an unvisited bin has a finite cost. This is
      the cross-entropy of the episode under the buffer's visitation
      distribution: high when the episode goes where the data is thin.
-3. Route mix in the data: west-to-east and east-to-west crossings of the
-   ring's midline, by arm (the rule in `routes.py`). Every crossing becomes
-   relabelled examples that traverse that arm, so this is the data-side
-   counterpart of Rep. It is aggregated over the whole data, not per task
-   pair, because collected segments do not belong to a pair.
+3. Route mix in the data: every *trip* across the ring, meaning a stretch of
+   data that leaves the west column of the ring and next reaches the east
+   column (or the reverse). Each trip is labelled by the arm that carried it
+   (its last midline crossing, the rule in `routes.py`) and by whether that
+   arm is the shorter or the longer one *for that trip's own start and end
+   cells* (grid planner; equal lengths are a tie). Every trip becomes
+   relabelled examples along that arm, so this is the data-side counterpart
+   of Rep. The main data score (spec section 9) is the longer-arm share of
+   west-to-east trips: 0 when the data has collapsed onto the shorter route,
+   0.5 when both routes are equally represented.
+   Why trips and not midline crossings: pooling crossings by arm cannot see
+   collapse, because the shorter arm is north in the upper rows and south in
+   the lower rows, so data that always takes the shorter route splits evenly
+   between the arms. And a ball parked at a goal on the midline wobbles back
+   and forth across it, which would count as many crossings; it makes no
+   trip. (Both found by the independent audit of 30 Oct.)
 
 Settings (BINS_PER_CELL, the add-one smoothing) are fixed here, before any
 practice result exists, and are the same for every condition.
@@ -42,7 +53,8 @@ import numpy as np
 
 from envs.mazes import RINGS, free_cells
 from envs.pointmaze import MAZES
-from routes import midline_crossings
+from expert import plan_cells
+from routes import trajectory_route
 
 BINS_PER_CELL = 4   # 0.25-cell bins: half the ball's top speed per step
 
@@ -68,7 +80,8 @@ class DataDiversityLog:
         self.n_free = int(self.free_mask.sum())
         self.counts = {"all": np.zeros(self.shape, dtype=np.int64),
                        "collected": np.zeros(self.shape, dtype=np.int64)}
-        self.crossings = {"all": _empty_crossings(), "collected": _empty_crossings()}
+        self.trips = {"all": _empty_trips(), "collected": _empty_trips()}  # end_rows: trips per end row
+        self._shorter_cache = {}
         self.episodes = []
 
     # --- input ------------------------------------------------------------------
@@ -90,7 +103,7 @@ class DataDiversityLog:
         for positions in trajectories:
             rows, cols = self._bins(positions)
             np.add.at(self.counts["all"], (rows, cols), 1)
-            self._tally_crossings(positions, ("all",))
+            self._tally_trips(positions, rows, cols, ("all",))
 
     def add_episode(self, positions):
         """Add one collected episode; return what it added to the buffer."""
@@ -107,29 +120,58 @@ class DataDiversityLog:
         }
         for key in ("all", "collected"):
             np.add.at(self.counts[key], (rows, cols), 1)
-        self._tally_crossings(positions, ("all", "collected"))
+        self._tally_trips(positions, rows, cols, ("all", "collected"))
         self.episodes.append(record)
         return record
 
-    def _tally_crossings(self, positions, keys):
+    def _shorter_arm(self, start, end):
+        key = (start, end)
+        if key not in self._shorter_cache:
+            north = len(plan_cells(self.grid, start, end, "north"))
+            south = len(plan_cells(self.grid, start, end, "south"))
+            self._shorter_cache[key] = "tie" if north == south else ("north" if north < south else "south")
+        return self._shorter_cache[key]
+
+    def _tally_trips(self, positions, rows, cols, keys):
+        """Find trips across the ring and tally them by arm, direction and
+        shorter/longer.
+
+        The ring's west and east columns are corridors, so the ball's visits to
+        each come in unbroken runs of steps. A trip joins a run in one end
+        column to the next run in the other. It starts where the ball entered
+        the first column and ends where it left the second (or the episode
+        ended), so a ball that climbs the west column from row 6, crosses by
+        the north arm and descends to row 6 is a row-6 trip on its longer arm.
+        """
         if self.ring is None:
             return
-        mid = self.ring["midline_col"]
-        n_cols = len(self.grid[0])
-        midline_x = mid + 0.5 - n_cols / 2
-        north_y = len(self.grid) / 2 - self.ring["north_row"] - 0.5
-        south_y = len(self.grid) / 2 - self.ring["south_row"] - 0.5
-        xy = np.asarray(positions, dtype=np.float64)[:, :2]
-        for j, y in midline_crossings(xy, midline_x):
-            if abs(y - north_y) <= 0.5:
-                arm = "north"
-            elif abs(y - south_y) <= 0.5:
-                arm = "south"
-            else:  # the walls make this impossible, as in routes.py
-                raise ValueError(f"midline crossed at y={y:.3f}, outside both arms")
-            direction = "west_to_east" if xy[j + 1, 0] > xy[j, 0] else "east_to_west"
+        west, east = self.ring["west_col"], self.ring["east_col"]
+        positions = np.asarray(positions, dtype=np.float64)
+        cell_rows, cell_cols = (rows // self.k).tolist(), (cols // self.k).tolist()
+        runs = []                         # [side, first index, last index]
+        for i, c in enumerate(cell_cols):
+            side = "west" if c == west else "east" if c == east else None
+            if side is None:
+                continue
+            if runs and runs[-1][0] == side and runs[-1][2] == i - 1:
+                runs[-1][2] = i
+            else:
+                runs.append([side, i, i])
+        for (side_a, a0, _), (side_b, _, b1) in zip(runs, runs[1:]):
+            if side_a == side_b:
+                continue
+            arm = trajectory_route(positions[a0:b1 + 1], self.maze)
+            if arm == "neither":          # cannot happen: the ring forces a crossing
+                raise ValueError("trip between the end columns without a midline crossing")
+            shorter = self._shorter_arm((cell_rows[a0], cell_cols[a0]),
+                                        (cell_rows[b1], cell_cols[b1]))
+            length = "tie" if shorter == "tie" else ("shorter" if arm == shorter else "longer")
+            direction = "west_to_east" if side_b == "east" else "east_to_west"
             for key in keys:
-                self.crossings[key][direction][arm] += 1
+                self.trips[key][direction][arm] += 1
+                self.trips[key][direction][length] += 1
+                rows_seen = self.trips[key][direction]["end_rows"]
+                rows_seen[cell_rows[b1]] = rows_seen.get(cell_rows[b1], 0) + 1
 
     # --- output -----------------------------------------------------------------
 
@@ -146,19 +188,22 @@ class DataDiversityLog:
                 "states": int(total),
                 "coverage": float((counts > 0).sum() / self.n_free),
                 "entropy_normalised": entropy / math.log(self.n_free) if total else None,
-                "crossings": _with_balance(self.crossings[key]) if self.ring else None,
+                "trips": _with_shares(self.trips[key]) if self.ring else None,
             }
         return out
 
 
-def _empty_crossings():
-    return {d: {"north": 0, "south": 0} for d in ("west_to_east", "east_to_west")}
+def _empty_trips():
+    return {d: {"north": 0, "south": 0, "shorter": 0, "longer": 0, "tie": 0, "end_rows": {}}
+            for d in ("west_to_east", "east_to_west")}
 
 
-def _with_balance(crossings):
-    """Add the minority-arm share per direction (0-0.5; None with no crossings)."""
+def _with_shares(trips):
+    """Add the longer-arm share per direction (0-1; ties excluded; None with
+    no non-tie trips). For west-to-east trips this is the main data score."""
     out = {}
-    for direction, arms in crossings.items():
-        n = arms["north"] + arms["south"]
-        out[direction] = {**arms, "minority_arm_share": min(arms.values()) / n if n else None}
+    for direction, t in trips.items():
+        n = t["shorter"] + t["longer"]
+        out[direction] = {**t, "end_rows": dict(sorted(t["end_rows"].items())),
+                          "longer_arm_share": t["longer"] / n if n else None}
     return out
