@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from envs.mazes import M1
 from envs.pointmaze import make_env
+from episode import EPISODE_STEPS
 from expert import run_episode
 
 
@@ -126,7 +127,7 @@ def main():
     parser.add_argument("--env-steps", type=int, default=20000)
     parser.add_argument("--updates", type=int, default=300)
     parser.add_argument("--batch-size", type=int, default=256)
-    parser.add_argument("--horizon", type=int, default=100)
+    parser.add_argument("--horizon", type=int, default=EPISODE_STEPS)
     parser.add_argument("--output", type=Path, default=ROOT / "results/stage1/mac_throughput.json")
     args = parser.parse_args()
     result = {

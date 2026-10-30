@@ -29,7 +29,7 @@ def main():
     parser.add_argument("--output", type=Path, default=ROOT / "results/stage1/evaluation.json")
     args = parser.parse_args()
     config = EvaluationConfig(maze=args.maze, **({"sampled_rollouts": 10, "minimum_successes": 2,
-        "greedy_rollouts": 2, "bootstrap_resamples": 200, "adaptation_steps": 100}
+        "greedy_rollouts": 2, "bootstrap_resamples": 200, "adaptation_steps": 60}
         if args.quick else {}))
     reports = []
     for policy in (ExpertPolicy(), RandomPolicy()):

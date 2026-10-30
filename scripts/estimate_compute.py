@@ -31,7 +31,7 @@ def main():
     if a.horizon != measured["simulator"]["horizon"]:
         raise ValueError("re-measure with the chosen horizon before estimating it")
     scenarios = []
-    for budget in (100000, 1000000, 5000000):
+    for budget in (99960, 249960, 999960):  # tuning, pilot N, cap N (whole episodes)
         for seeds in (6, 20):
             scenario = counts(a, budget, seeds)
             scenario["median_rates"] = estimate_runtime(scenario, measured)

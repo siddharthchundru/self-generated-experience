@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from eval.metrics import best_of_m, common_pair_rep, summarise_rollouts
 from eval.policies import ExpertPolicy, RandomPolicy
 from eval.protocol import EvaluationConfig, TaskPair, episode_seed
+from episode import EPISODE_STEPS
 from eval.suite import AdaptationResult, collect, evaluate_policy, no_update_adaptation
 
 
@@ -82,6 +83,8 @@ class TestProtocol(unittest.TestCase):
             EvaluationConfig(adaptation_steps=101)
         with self.assertRaises(ValueError):
             EvaluationConfig(best_of_m=3)
+        with self.assertRaises(ValueError):
+            EvaluationConfig(horizon=100)  # T is project-wide, not per evaluation
 
     def test_phase_and_row_seeds_are_independent_and_repeatable(self):
         self.assertEqual(episode_seed(1, 2, 3, 4), episode_seed(1, 2, 3, 4))
@@ -97,7 +100,7 @@ class TestProtocol(unittest.TestCase):
 
 class TestEndToEnd(unittest.TestCase):
     config = EvaluationConfig(sampled_rollouts=10, greedy_rollouts=2, minimum_successes=2,
-                              bootstrap_resamples=50, adaptation_steps=200)
+                              bootstrap_resamples=50, adaptation_steps=3*EPISODE_STEPS)
 
     def test_real_wall_expert_and_total_adaptation_budget(self):
         report = evaluate_policy(ExpertPolicy(), self.config, no_update_adaptation)
@@ -105,11 +108,11 @@ class TestEndToEnd(unittest.TestCase):
         self.assertEqual(len(report["aggregate"]["Rep_qualifying_rows"]), 6)
         self.assertEqual(report["aggregate"]["primary_rows"], [1, 2, 3, 5, 6, 7])
         for run in report["adaptation_runs"].values():
-            self.assertEqual(run["environment_steps"], 200)  # NOT 6*200
+            self.assertEqual(run["environment_steps"], 3*EPISODE_STEPS)  # NOT 6 times that
             self.assertEqual(run["gradient_steps"], 0)
         for phase in ("P1", "P1_own"):
             collected = [r for r in report["rollouts"] if r["phase"] == phase+"_adaptation_collection"]
-            self.assertEqual(sum(r["steps"] for r in collected), 200)
+            self.assertEqual(sum(r["steps"] for r in collected), 3*EPISODE_STEPS)
         # Expert ignores the wall: greedy insists on its original shorter route.
         self.assertEqual(report["aggregate"]["A_k"], 0)
         self.assertGreater(report["aggregate"]["A_0"], 0)
