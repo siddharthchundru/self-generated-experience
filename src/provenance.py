@@ -12,6 +12,11 @@ in Stage 2, where every result must be traceable to code a reader can check
 out. A deliberate exploratory run can still write into `results/` with an
 explicit `--allow-dirty`, and the record then says the tree was dirty.
 
+"Dirty" means uncommitted changes to anything *outside* `results/`: results
+written by earlier runs from the same clean commit do not count, or every run
+after the first would be refused (audit of 30 Oct, SF1). Scripts take the
+record once, at start, so it describes the code that actually ran.
+
 Also fixes audit finding M11: outside a git checkout the record says so
 (commit None) instead of crashing; writing into `results/` then needs
 `--allow-dirty`, because the commit cannot be recorded.
@@ -31,7 +36,8 @@ def git_state(root: Path) -> dict:
     try:
         commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True,
                                          stderr=subprocess.DEVNULL).strip()
-        status = subprocess.check_output(["git", "status", "--porcelain"], cwd=root, text=True,
+        status = subprocess.check_output(["git", "status", "--porcelain", "--", ".",
+                                          ":(exclude,icase)results"], cwd=root, text=True,
                                          stderr=subprocess.DEVNULL)
     except (subprocess.CalledProcessError, FileNotFoundError):
         return {"git_commit": None, "working_tree_dirty": None}
@@ -68,7 +74,10 @@ def guard_results_write(root: Path, output: Path, allow_dirty: bool) -> dict:
     filed as a result and is always allowed. Returns the git state.
     """
     state = git_state(root)
-    inside_results = Path(output).resolve().is_relative_to((root / "results").resolve())
+    # Case-folded, because macOS file systems treat RESULTS/ and results/ as one folder.
+    target = str(Path(output).resolve()).casefold()
+    results = str((root / "results").resolve()).casefold()
+    inside_results = target == results or target.startswith(results + "/")
     clean = state["git_commit"] is not None and state["working_tree_dirty"] is False
     if inside_results and not clean and not allow_dirty:
         reason = ("not a git checkout" if state["git_commit"] is None

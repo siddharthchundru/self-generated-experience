@@ -36,6 +36,7 @@ def main():
         suffix = ("" if args.maze == "M1" else "-" + args.maze.lower()) + ("-smoke" if args.quick else "")
         args.output = ROOT / f"results/stage1/evaluation{suffix}.json"
     guard_results_write(ROOT, args.output, args.allow_dirty)
+    record = run_record(ROOT)  # taken at start: describes the code that runs
     config = EvaluationConfig(maze=args.maze, **({"sampled_rollouts": 10, "minimum_successes": 2,
         "greedy_rollouts": 2, "bootstrap_resamples": 200, "adaptation_steps": 60}
         if args.quick else {}))
@@ -56,7 +57,7 @@ def main():
         handcheck["trajectory_sha256"] == hashlib.sha256(
             (ROOT / "results/stage1/route_handcheck/trajectories.json").read_bytes()).hexdigest())
     result = {
-        **run_record(ROOT),
+        **record,
         "quick_smoke_only": args.quick, "evaluation_pipeline_passes": pipeline_passes,
         "stage1_gate_complete": False,
         "human_classifier_check_valid": handcheck_valid,

@@ -95,6 +95,9 @@ class TestRelabelling(unittest.TestCase):
         np.testing.assert_array_equal(batch["gap"], t_goal - t)
         np.testing.assert_array_equal(batch["action"], t % NUM_ACTIONS)
         np.testing.assert_allclose(batch["weight"], 0.9 ** (t_goal - t))
+        # The final state (t' = T) is a goal, and the full gap T occurs (audit of 30 Oct, MI1).
+        self.assertEqual(t_goal.max(), T)
+        self.assertGreater(np.mean(t_goal == T), 0.025)  # uniform pairs: T of T(T+1)/2 end at T
 
     def test_pairs_are_uniform_over_all_pairs(self):
         batch = self.buffer.sample(400_000, np.random.default_rng(1), gamma=1.0)

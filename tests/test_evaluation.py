@@ -24,7 +24,7 @@ from eval.policies import ExpertPolicy, RandomPolicy
 from eval.protocol import EvaluationConfig, TaskPair, episode_seed
 from episode import EPISODE_STEPS
 from eval.suite import (AdaptationResult, BudgetExhausted, NoUpdateAdapter, check_parameters_only,
-                        collect, evaluate_policy, no_update_adaptation)
+                        collect, evaluate_policy, no_update_adaptation, suite_parameter_digest)
 
 import numpy as np
 import torch
@@ -139,12 +139,14 @@ class TestEndToEnd(unittest.TestCase):
         calls = []
         policy = ExpertPolicy()
 
-        class Recorder(NoUpdateAdapter):
-            def adapt(inner, clone, session, buffer):
-                calls.append(clone)
-                return NoUpdateAdapter.adapt(inner, clone, session, buffer)
+        recorder = NoUpdateAdapter()  # an instance, not a subclass: only the exact stand-in may skip updates
 
-        evaluate_policy(policy, self.config, Recorder())
+        def adapt(clone, session, buffer):
+            calls.append(clone)
+            return NoUpdateAdapter.adapt(recorder, clone, session, buffer)
+
+        recorder.adapt = adapt
+        evaluate_policy(policy, self.config, recorder)
         self.assertEqual(len(calls), 2)
         self.assertIsNot(calls[0], policy)
         self.assertIsNot(calls[0], calls[1])
@@ -322,11 +324,88 @@ class TestAuditInterface(unittest.TestCase):
 
     def test_adaptation_leaves_the_original_policy_unchanged(self):
         policy = StubPolicy()
-        before = policy.parameter_digest()
+        before = suite_parameter_digest(policy)
         report = evaluate_policy(policy, self.config, CountingAdapter(2, self.k))
-        self.assertEqual(policy.parameter_digest(), before)
+        self.assertEqual(suite_parameter_digest(policy), before)
         self.assertEqual(report["parameter_digest"], before)
         self.assertEqual(report["policy_kind"], "learned_observation_and_goal_only")
+
+
+class TestAuditInterfaceBypasses(unittest.TestCase):
+    """Audit of 30 Oct, SF3: each bypass the auditor found is now refused."""
+
+    k = TestAuditInterface.k
+    config = TestAuditInterface.config
+
+    def setUp(self):
+        StubPolicy.seen = []
+
+    def test_step_counter_cannot_be_reset(self):
+        class Reset(CountingAdapter):
+            def adapt(inner, policy, session, buffer):
+                session.run_episode()
+                session.steps_used = 0
+        with self.assertRaises(AttributeError):
+            evaluate_policy(StubPolicy(), self.config, Reset(0, 0))
+
+    def test_stand_in_subclass_cannot_claim_stand_in_mode(self):
+        class Sneaky(NoUpdateAdapter):
+            pass
+        with self.assertRaisesRegex(AssertionError, "standin_"):
+            evaluate_policy(StubPolicy(), self.config, Sneaky())
+
+    def test_hidden_optimiser_steps_are_counted(self):
+        class Hidden(CountingAdapter):
+            def adapt(inner, policy, session, buffer):
+                result = CountingAdapter.adapt(inner, policy, session, buffer)
+                extra = torch.optim.SGD(policy.network.parameters(), lr=0.0)
+                for _ in range(5):
+                    extra.step()
+                return result
+        with self.assertRaisesRegex(AssertionError, "counted across all"):
+            evaluate_policy(StubPolicy(), self.config, Hidden(2, self.k))
+
+    def test_returned_optimiser_must_hold_the_policy_parameters(self):
+        class Elsewhere(CountingAdapter):
+            def adapt(inner, policy, session, buffer):
+                for _ in range(2):
+                    buffer.append(session.run_episode())
+                optimizer = torch.optim.Adam(torch.nn.Linear(6, 2).parameters())
+                for _ in range(self.k):
+                    optimizer.zero_grad(); optimizer.step()
+                return AdaptationResult(policy, self.k, "test_learned", optimizer)
+        with self.assertRaisesRegex(AssertionError, "exactly the adapted policy"):
+            evaluate_policy(StubPolicy(), self.config, Elsewhere(0, 0))
+
+    def test_constant_self_reported_fingerprint_does_not_hide_changes(self):
+        class Constant(StubPolicy):
+            def parameter_digest(self):
+                return "constant"
+
+            def start_episode(self, view, rng, sampled):
+                with torch.no_grad():
+                    self.network.bias.add_(1.0)
+                return StubPolicy.start_episode(self, view, rng, sampled)
+        with self.assertRaisesRegex(AssertionError, "parameters changed"):
+            evaluate_policy(Constant(), self.config)
+
+    def test_post_adaptation_evaluation_is_checked(self):
+        class DriftsAfterAdaptation(StubPolicy):
+            adapted = False
+
+            def start_episode(self, view, rng, sampled):
+                if self.adapted:
+                    with torch.no_grad():
+                        self.network.bias.add_(1.0)
+                return StubPolicy.start_episode(self, view, rng, sampled)
+
+        class MarkAdapted(CountingAdapter):
+            def adapt(inner, policy, session, buffer):
+                result = CountingAdapter.adapt(inner, policy, session, buffer)
+                policy.adapted = True
+                return result
+        with self.assertRaisesRegex(AssertionError, "post-adaptation"):
+            evaluate_policy(DriftsAfterAdaptation(), self.config, MarkAdapted(2, self.k))
 
 
 if __name__ == "__main__":

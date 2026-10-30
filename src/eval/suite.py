@@ -35,9 +35,16 @@ Adapter interface: `updates_per_env_step`, `new_buffer()`,
 
 import copy
 from dataclasses import asdict, dataclass
+import hashlib
 import time
 
 import numpy as np
+
+try:  # torch is needed only for learned policies; the Stage 1 stand-ins run without it
+    import torch
+    from torch.optim.optimizer import register_optimizer_step_post_hook
+except ImportError:  # pragma: no cover
+    torch = None
 
 from envs.pointmaze import make_env
 from routes import trajectory_route
@@ -80,15 +87,34 @@ def check_parameters_only(policy):
         raise TypeError("a learned policy must provide parameter_digest()")
 
 
+def _policy_modules(policy):
+    return [v for v in vars(policy).values() if hasattr(v, "state_dict") and hasattr(v, "parameters")]
+
+
+def suite_parameter_digest(policy):
+    """Fingerprint of every tensor in the policy's modules, computed here rather than
+    trusting the policy's own `parameter_digest()` (audit of 30 Oct, SF3)."""
+    digest = hashlib.sha256()
+    for index, module in enumerate(_policy_modules(policy)):
+        for key, tensor in module.state_dict(keep_vars=False).items():
+            digest.update(f"{index}.{key}".encode())
+            digest.update(tensor.detach().cpu().contiguous().numpy().tobytes())
+    return digest.hexdigest()
+
+
+def _parameter_ids(policy):
+    return {id(p) for module in _policy_modules(policy) for p in module.parameters()}
+
+
 class _ParameterGuard:
     """Asserts that evaluation phases leave a learned policy's parameters unchanged."""
 
     def __init__(self, policy):
         self.policy = policy
-        self.digest = None if is_stand_in(policy) else policy.parameter_digest()
+        self.digest = None if is_stand_in(policy) else suite_parameter_digest(policy)
 
     def check(self, phase):
-        if self.digest is not None and self.policy.parameter_digest() != self.digest:
+        if self.digest is not None and suite_parameter_digest(self.policy) != self.digest:
             raise AssertionError(f"policy parameters changed during evaluation phase {phase}")
 
 
@@ -172,7 +198,12 @@ class AdaptationSession:
         self.budget = config.adaptation_steps
         self.episode_steps = config.horizon
         self.phase = phase
-        self.steps_used = 0
+        self._steps_used = 0
+
+    @property
+    def steps_used(self):
+        """Read-only: only `run_episode` advances it (audit of 30 Oct, SF3)."""
+        return self._steps_used
 
     @property
     def remaining_steps(self):
@@ -194,7 +225,7 @@ class AdaptationSession:
         seed = episode_seed(self._config.seed, pair.row, self._phase, index)
         record, trajectory = rollout(self._envs[key], self._policy, pair, seed, True, horizon,
                                      keep_trajectory=True)
-        self.steps_used += horizon
+        self._steps_used += horizon
         self._records.append({**record, "wall": list(wall)})
         return trajectory
 
@@ -252,17 +283,27 @@ def _adapt(policy, tasks, config, adapter, phase):
     if len(buffer) != 0:
         raise AssertionError("adaptation must start from an empty buffer")
     session = AdaptationSession(clone, tasks, config, phase)
+    # Count every optimiser step taken anywhere during adaptation, including on an
+    # optimiser the adapter does not return (audit of 30 Oct, SF3).
+    counted = [0]
+    handle = None
+    if torch is not None:
+        handle = register_optimizer_step_post_hook(
+            lambda *_: counted.__setitem__(0, counted[0] + 1))
     try:
         result = adapter.adapt(clone, session, buffer)
     finally:
         session.close()
+        if handle is not None:
+            handle.remove()
     if result.policy is not clone:
         raise AssertionError("adapter must return the copy it was given")
     if session.steps_used != config.adaptation_steps:
         raise AssertionError(f"adapter used {session.steps_used} of {config.adaptation_steps} "
                              "adaptation steps; the budget must be used exactly")
     if result.mode.startswith("standin_"):
-        if not isinstance(adapter, NoUpdateAdapter) or result.gradient_steps != 0 or result.optimizer is not None:
+        if (type(adapter) is not NoUpdateAdapter or result.gradient_steps != 0
+                or result.optimizer is not None or counted[0] != 0):
             raise AssertionError("only the no-update stand-in may report a standin_ mode")
         optimizer_steps = 0
     else:
@@ -274,10 +315,13 @@ def _adapt(policy, tasks, config, adapter, phase):
                                  f"ratio x k requires {expected}")
         if result.optimizer is None:
             raise AssertionError("a learned adapter must return its optimiser for the step check")
+        optimized = {id(p) for group in result.optimizer.param_groups for p in group["params"]}
+        if optimized != _parameter_ids(clone):
+            raise AssertionError("the returned optimiser does not hold exactly the adapted policy's parameters")
         optimizer_steps = optimizer_step_count(result.optimizer)
-        if optimizer_steps != result.gradient_steps:
-            raise AssertionError(f"optimiser took {optimizer_steps} steps, adapter reported "
-                                 f"{result.gradient_steps}")
+        if optimizer_steps != result.gradient_steps or counted[0] != result.gradient_steps:
+            raise AssertionError(f"optimiser took {optimizer_steps} steps ({counted[0]} counted across all "
+                                 f"optimisers), adapter reported {result.gradient_steps}")
     return result, {
         "status": result.mode,
         "environment_steps": session.steps_used,

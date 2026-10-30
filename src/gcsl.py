@@ -27,11 +27,14 @@ How the pieces map to the spec:
   example picks a stored trajectory uniformly at random, then a pair of time
   indices t < t' uniformly among all such pairs in 0..T. The input is the state
   at t, the label is the action taken at t, and the goal is the *position* at
-  t'. Implementation choice, stated: "uniformly among all pairs" is read as each
-  of the T(T+1)/2 ordered pairs equally likely (drawn as the smaller and larger
-  of two distinct uniform indices, as GCSL's released code does with its
-  min/max construction), not "t uniform, then t' uniform after t", which would
-  over-weight pairs near the end of the episode.
+  t'. Implementation choice, stated (a judgment call to report in the paper):
+  "uniformly" is read as each of the T(T+1)/2 ordered pairs equally likely,
+  drawn as the smaller and larger of two distinct uniform indices. GCSL's
+  released code uses a similar min/max construction but is not exactly uniform
+  (adjacent pairs get about 1.5 times, and pairs ending at the last state about
+  0.5 times, the uniform weight; audit of 30 Oct, MI4). The other reading, "t
+  uniform, then t' uniform after t", would over-weight pairs late in the
+  episode.
 - Weighting (weighted GCSL, Yang et al. 2022, discounted relabelling weight
   only). Each example's loss is multiplied by gamma^(t' - t); the batch loss is
   the weighted sum divided by the sum of the weights. gamma = 0.962 for the main
