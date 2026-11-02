@@ -17,7 +17,8 @@ Task settings (each set here, none inherited silently from the library):
   each of its steps; holding an action for 10 substeps with one cap would let
   the ball go faster (about 6.9). So the cap is applied before every substep,
   and one 10 Hz step is exactly ten of the library's own steps.
-- Every episode lasts exactly `max_episode_steps` steps. Reaching the goal does
+- Every episode lasts exactly `max_episode_steps` steps, by default
+  EPISODE_STEPS (T = 60, defined once in `episode.py`). Reaching the goal does
   not end it, and the goal stays fixed (spec section 6). Episode success means
   the ball is within 0.45 of the goal (the library's fixed success radius) at
   the final step, i.e. `info["success"]` on the last step. Fixed length means
@@ -42,6 +43,7 @@ import gymnasium_robotics
 import numpy as np
 
 from envs.mazes import M0, M0_DEMO_REGION, M1, M1_DEMO_REGION, M2, free_cells
+from episode import EPISODE_STEPS
 
 gym.register_envs(gymnasium_robotics)
 
@@ -57,7 +59,6 @@ PHYSICS_DT = 0.01                                # library's fixed MuJoCo subste
 FRAME_SKIP = round(1 / (CONTROL_HZ * PHYSICS_DT))  # = 10 substeps per action
 POSITION_NOISE = 0.25                            # cell widths; planning default
 SUCCESS_RADIUS = 0.45                            # fixed in the library; recorded here
-MAX_EPISODE_STEPS = 100                          # 10 s; planning default, set in the pilot
 
 # Any registered PointMaze id works as a base; `maze_map` replaces its layout,
 # and every setting that matters is passed or set below.
@@ -66,7 +67,7 @@ _BASE_ID = "PointMaze_UMaze-v3"
 
 def make_env(
     maze: str = "M1",
-    max_episode_steps: int = MAX_EPISODE_STEPS,
+    max_episode_steps: int = EPISODE_STEPS,
     allowed_goals: frozenset | None = None,
     blocked_cells: frozenset = frozenset(),
 ) -> gym.Env:

@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from envs.mazes import M1, M2, free_cells
 from eval.compute import ComputeAssumptions, counts, estimate_runtime
+from provenance import guard_results_write
 
 
 def main():
@@ -23,7 +24,9 @@ def main():
     parser.add_argument("--measurements", type=Path, default=ROOT / "results/stage1/mac_throughput.json")
     parser.add_argument("--assumptions", type=Path, help="JSON overrides of ComputeAssumptions")
     parser.add_argument("--output", type=Path, default=ROOT / "results/stage1/compute_estimate.json")
+    parser.add_argument("--allow-dirty", action="store_true")
     args = parser.parse_args()
+    git = guard_results_write(ROOT, args.output, args.allow_dirty)
     measured = json.loads(args.measurements.read_text())
     overrides = json.loads(args.assumptions.read_text()) if args.assumptions else {}
     actual_pairs = sum(len(free_cells(grid))*(len(free_cells(grid))-1) for grid in (M1, M2))
@@ -31,13 +34,13 @@ def main():
     if a.horizon != measured["simulator"]["horizon"]:
         raise ValueError("re-measure with the chosen horizon before estimating it")
     scenarios = []
-    for budget in (100000, 1000000, 5000000):
+    for budget in (99960, 249960, 999960):  # tuning, pilot N, cap N (whole episodes)
         for seeds in (6, 20):
             scenario = counts(a, budget, seeds)
             scenario["median_rates"] = estimate_runtime(scenario, measured)
             scenario["slowest_rates"] = estimate_runtime(scenario, measured, conservative=True)
             scenarios.append(scenario)
-    result = {"status": "planning_scenarios_not_a_frozen_compute_cap", "assumptions": asdict(a),
+    result = {**git, "status": "planning_scenarios_not_a_frozen_compute_cap", "assumptions": asdict(a),
               "measurement_file": str(args.measurements.relative_to(ROOT)) if args.measurements.is_relative_to(ROOT) else str(args.measurements),
               "benchmark_batch_size": measured["network"]["batch_size"], "scenarios": scenarios,
               "limitations": [

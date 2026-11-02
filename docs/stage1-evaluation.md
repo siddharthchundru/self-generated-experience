@@ -86,10 +86,15 @@ budget parity or adaptation effectiveness.
 pip install -r requirements.txt
 python -m unittest discover -s tests
 python scripts/evaluate_stage1.py
-python scripts/evaluate_stage1.py --maze M0 --output results/stage1/evaluation-m0.json
+python scripts/evaluate_stage1.py --maze M0 --quick   # writes results/stage1/evaluation-m0-smoke.json
 ```
 
 `--quick` lowers sample counts for a smoke check and is not the full gate.
+The default output name follows `--maze` and `--quick`, and the script refuses
+to write into `results/` from a tree with uncommitted changes unless given
+`--allow-dirty`. The committed Stage 1 results were produced with episodes of
+100 steps; since Stage 2 every episode is T = 60 steps (`src/episode.py`), so a
+re-run will not reproduce them exactly.
 Reports store per-attempt records, per-pair denominators, aggregate outcomes,
 configuration, package versions and source fingerprints. S_out, P2/P3, BMD's
 mode-weighted metric, training exposure and the Stage 2 analysis are not silently
