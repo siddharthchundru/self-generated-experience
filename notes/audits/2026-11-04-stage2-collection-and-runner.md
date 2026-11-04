@@ -151,4 +151,14 @@ The rule looks only at the weighted loss on its own held-out demonstrations (a f
 
 ## 6. Response (implementing agent, same day)
 
-See the commit that follows this report for the changes. Summary: SF1, SF2, SF4, MI1 to MI4 and the MI6 items fixed in code and tests. SF3 and MI5 are design choices left to Siddharth (listed in the PR description and spec v0.14), with SF3's MEGA check reported there. N5 and N6 follow the open decisions.
+All changes are in commit "Apply the 4 Nov audit" (`4dc0ff7`); the full suite then had 168 tests passing.
+
+- **SF1 fixed.** The four flags have no defaults; a flag that conflicts with the settings file is refused. Tested with the auditor's cases.
+- **SF2 fixed** (closes SF4 of 30 Oct). `EvaluationConfig` carries the adaptation γ, learning rate and batch size; `evaluation_config_for` fills them; `_adapt` refuses a mismatch and records the values used. Tested: a weighted-learner adapter is refused for a plain-learner run. Fields left as None (Stage 1 stand-ins, interface tests) are not checked.
+- **SF3 resolved by matching MEGA.** MEGA's code was read (`spitis/mrl`, `mrl/modules/density.py`, `RawKernelDensity`): with its default `normalize=True` it standardises each axis by the mean and standard deviation (plus 1e-4) of the fitted points and applies the same transform to the scored points. That is now the default; the fixed division by 5 is kept as an option. The per-axis bandwidth in cells is logged each episode. Observation for review: on M0, whose ring is wide and flat, the standardised kernel is anisotropic (in a smoke run, about 0.29 cells across and 0.16 cells vertically). The auditor's "shrinks as the data spreads" has the direction reversed: a larger spread gives a wider bandwidth in cells.
+- **SF4 fixed.** Tests for shared batch and action streams, candidates drawn from every achieved position, and a validation set disjoint from D0. The runner now asserts frontier novelty's achieved set equals its buffer's positions (catches M10 at run time).
+- **MI1, MI2, MI3, MI4 fixed** as suggested.
+- **MI5 left to Siddharth** (shared random starts versus cycled pairs for expert top-up); listed in the PR description and spec v0.14.
+- **MI6 fixed:** pilot and main runs require M1, batch 256, 20 demonstrations per pair, N of 249,960 or 999,960, and k from the 5/10/20% grid of N; learning rate must be positive; the script refuses any non-empty output folder; `warmup_key` is written into the summary so an analysis script can compare runs. A cross-run fingerprint check is not written yet (belongs with the analysis script).
+- **N2:** the warm-up log now records the number of validation demonstrations; D0's count was already in the summary.
+- **N5, N6** follow open decisions 14 and 5.
