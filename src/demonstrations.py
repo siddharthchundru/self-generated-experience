@@ -30,27 +30,30 @@ DEMOS_PER_PAIR = 20
 _SEED_TAG = 0xD0  # separates demonstration seeds from evaluation seeds
 
 
-def demonstration_plan(maze, per_pair, seed):
-    """(pair, route, reset seed) for every demonstration, in seed-shuffled order."""
+def demonstration_plan(maze, per_pair, seed, seed_tag=_SEED_TAG):
+    """(pair, route, reset seed) for every demonstration, in seed-shuffled order.
+
+    `seed_tag` separates independent demonstration sets drawn with the same
+    run seed; only the warm-up validation set (training.py) uses another tag."""
     if per_pair <= 0 or per_pair % 2:
         raise ValueError("per_pair must be a positive even number (half per route)")
     plan = []
     for pair in task_pairs(maze):
         for index in range(per_pair):
             route = "north" if index < per_pair // 2 else "south"
-            reset_seed = int(np.random.SeedSequence([seed, _SEED_TAG, pair.row, index]).generate_state(1)[0])
+            reset_seed = int(np.random.SeedSequence([seed, seed_tag, pair.row, index]).generate_state(1)[0])
             plan.append((pair, route, reset_seed))
-    order = np.random.default_rng(np.random.SeedSequence([seed, _SEED_TAG])).permutation(len(plan))
+    order = np.random.default_rng(np.random.SeedSequence([seed, seed_tag])).permutation(len(plan))
     return [plan[i] for i in order]
 
 
-def make_demonstrations(maze="M1", per_pair=DEMOS_PER_PAIR, seed=0):
+def make_demonstrations(maze="M1", per_pair=DEMOS_PER_PAIR, seed=0, seed_tag=_SEED_TAG):
     """Run the plan. Each result has observations, actions, goal, row, route and success."""
     grid = RINGS[maze]["grid"]
     env = make_env(maze)
     try:
         demonstrations = []
-        for pair, route, reset_seed in demonstration_plan(maze, per_pair, seed):
+        for pair, route, reset_seed in demonstration_plan(maze, per_pair, seed, seed_tag):
             episode = run_episode(env, grid, pair.start, pair.goal, route=route, seed=reset_seed)
             demonstrations.append({
                 "observations": episode["observations"], "actions": episode["actions"],

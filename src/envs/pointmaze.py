@@ -136,6 +136,7 @@ class RequireCells(gym.Wrapper):
 
     def __init__(self, env, grid, allowed_goals):
         super().__init__(env)
+        self.grid = grid
         self.free = {(r, c) for r, row in enumerate(grid) for c, v in enumerate(row) if v == 0}
         self.allowed_goals = frozenset(allowed_goals)
         assert self.allowed_goals <= self.free
@@ -151,6 +152,25 @@ class RequireCells(gym.Wrapper):
         if goal not in self.allowed_goals:
             raise ValueError(f"goal cell {goal} is not allowed in this environment")
         return self.env.reset(seed=seed, options=options)
+
+    def set_goal_position(self, obs, xy):
+        """Move this episode's goal to the exact point `xy`, right after reset.
+
+        Frontier novelty commands an achieved position, not a cell centre plus
+        noise. The point must lie inside a cell this environment allows as a
+        goal, so the goal-leakage rule holds for exact goals as well. Call it
+        before the first step; returns `obs` with the new desired goal.
+        """
+        xy = np.asarray(xy, dtype=np.float64)
+        cell = xy_to_cell(self.grid, xy)
+        if cell not in self.allowed_goals:
+            raise ValueError(f"goal point {tuple(xy)} lies in cell {cell}, which is not allowed here")
+        inner = self.env.unwrapped
+        inner.goal = xy.copy()
+        inner.update_target_site_pos()
+        obs = dict(obs)
+        obs["desired_goal"] = xy.copy()
+        return obs
 
 
 def cell_to_xy(grid: list[list[int]], cell: tuple[int, int]) -> np.ndarray:

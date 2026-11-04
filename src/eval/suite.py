@@ -309,6 +309,11 @@ def _adapt(policy, tasks, config, adapter, phase):
     else:
         if adapter.updates_per_env_step != config.adaptation_updates_per_env_step:
             raise AssertionError("adapter's update ratio differs from the configured training ratio")
+        for name in ("gamma", "learning_rate", "batch_size"):
+            wanted = getattr(config, f"adaptation_{name}")
+            if wanted is not None and getattr(adapter, name, None) != wanted:
+                raise AssertionError(f"adapter's {name} ({getattr(adapter, name, None)}) differs from "
+                                     f"training's ({wanted})")
         expected = round(config.adaptation_updates_per_env_step * config.adaptation_steps)
         if result.gradient_steps != expected:
             raise AssertionError(f"adapter reported {result.gradient_steps} gradient steps; "
@@ -329,6 +334,7 @@ def _adapt(policy, tasks, config, adapter, phase):
         "gradient_steps": result.gradient_steps,
         "optimizer_steps": optimizer_steps,
         "updates_per_env_step": 0.0 if result.mode.startswith("standin_") else config.adaptation_updates_per_env_step,
+        "learner_settings": {name: getattr(adapter, name, None) for name in ("gamma", "learning_rate", "batch_size")},
         "buffer_size_at_start": 0,
         "buffer_size_at_end": len(buffer),
     }, session._records

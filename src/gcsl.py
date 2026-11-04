@@ -51,8 +51,9 @@ How the pieces map to the spec:
   (audit of 28 Oct, S2). The optimiser lives in `GCSLLearner`.
 
 Not in this file: goal selection and the collection loops for each condition
-(next step of Stage 2), and the hyperparameters that tuning on M0 sets
-(learning rate, updates per environment step).
+(`collection.py`, `frontier.py`), the warm-up and practice schedule
+(`training.py`), and the hyperparameters that tuning on M0 sets (learning
+rate, updates per environment step).
 """
 
 import hashlib
@@ -236,14 +237,35 @@ def effective_sample_size(weights):
 class GCSLLearner:
     """Owns the optimiser and performs weighted GCSL updates on a policy's network."""
 
-    def __init__(self, policy, gamma, learning_rate, batch_size=256):
+    def __init__(self, policy, gamma, learning_rate, batch_size=256, lr_warmup_steps=0):
+        """A new learner always has a new Adam optimiser: zero running averages and
+        step count. Building one when practice starts is how the spec's reset of
+        Adam's state after warm-up is done (v0.12); only the network's weights,
+        which live on the policy, carry over.
+
+        `lr_warmup_steps`: the pre-agreed fallback of spec v0.12, off by default
+        (0). When positive, the learning rate rises linearly from
+        learning_rate / lr_warmup_steps on this learner's first gradient step to
+        the full learning_rate on step lr_warmup_steps, and stays there.
+        """
         if not 0 < gamma <= 1:
             raise ValueError("gamma must lie in (0, 1]")
+        if lr_warmup_steps < 0 or int(lr_warmup_steps) != lr_warmup_steps:
+            raise ValueError("lr_warmup_steps must be a non-negative whole number")
         self.policy = policy
         self.gamma = gamma
         self.batch_size = batch_size
+        self.learning_rate = learning_rate
+        self.lr_warmup_steps = int(lr_warmup_steps)
         self.optimizer = torch.optim.Adam(policy.network.parameters(), lr=learning_rate)
         self.gradient_steps = 0
+        self.last_batch = None  # the most recent relabelled batch, for exposure logging
+
+    def current_learning_rate(self):
+        """Learning rate the next gradient step will use."""
+        if self.lr_warmup_steps == 0:
+            return self.learning_rate
+        return self.learning_rate * min(1.0, (self.gradient_steps + 1) / self.lr_warmup_steps)
 
     def update(self, buffer, rng):
         """One gradient step on one relabelled batch. Returns the loss and the batch's ESS."""
@@ -252,10 +274,13 @@ class GCSLLearner:
                                      torch.from_numpy(batch["goal"]))
         weights = torch.from_numpy(batch["weight"]).float()
         loss = weighted_loss(logits, torch.from_numpy(batch["action"]), weights)
+        for group in self.optimizer.param_groups:
+            group["lr"] = self.current_learning_rate()
         self.optimizer.zero_grad(set_to_none=True)
         loss.backward()
         self.optimizer.step()
         self.gradient_steps += 1
+        self.last_batch = batch
         return {"loss": float(loss.detach()), "effective_sample_size": effective_sample_size(batch["weight"]),
                 "mean_gap": float(batch["gap"].mean())}
 
@@ -289,19 +314,22 @@ class GCSLAdapter:
     episode is the same schedule the collection loops use.
     """
 
-    def __init__(self, gamma, learning_rate, updates_per_env_step, batch_size=256, seed=0):
+    def __init__(self, gamma, learning_rate, updates_per_env_step, batch_size=256, seed=0,
+                 lr_warmup_steps=0):
         self.gamma = gamma
         self.learning_rate = learning_rate
         self.updates_per_env_step = updates_per_env_step
         self.batch_size = batch_size
         self.seed = seed
+        self.lr_warmup_steps = lr_warmup_steps  # 0 unless the v0.12 fallback is applied to adaptation
         self._per_episode = updates_per_episode(updates_per_env_step)
 
     def new_buffer(self):
         return TrajectoryBuffer()
 
     def adapt(self, policy, session, buffer):
-        learner = GCSLLearner(policy, self.gamma, self.learning_rate, self.batch_size)
+        learner = GCSLLearner(policy, self.gamma, self.learning_rate, self.batch_size,
+                              self.lr_warmup_steps)
         rng = np.random.default_rng(np.random.SeedSequence([self.seed, session.phase]))
         while session.remaining_steps >= session.episode_steps:
             buffer.add(session.run_episode(), "adaptation")
