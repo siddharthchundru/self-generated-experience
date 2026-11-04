@@ -143,7 +143,7 @@ class TestSettings(unittest.TestCase):
             TrainingSettings(condition=TASK_DIRECTED, budget_steps=250_000)
         with self.assertRaises(ValueError):
             TrainingSettings(condition=TASK_DIRECTED, purpose="pilot")       # k still the placeholder
-        TrainingSettings(condition=TASK_DIRECTED, purpose="pilot", adaptation_steps=25 * T)
+        TrainingSettings(condition=TASK_DIRECTED, purpose="pilot", adaptation_steps=416 * T)
         with self.assertRaises(NotImplementedError):
             TrainingSettings(condition=TASK_DIRECTED, adaptation_fresh_optimizer=False)
         with self.assertRaises(ValueError):
@@ -195,6 +195,130 @@ class TestScript(unittest.TestCase):
                 script.main(["--condition", "random_actions", "--budget-steps", str(T),
                              "--out", str(ROOT / "results" / "should_not_exist")])
         self.assertFalse((ROOT / "results" / "should_not_exist").exists())
+
+
+class TestAuditOf4Nov(unittest.TestCase):
+    """Tests added after the independent audit of 4 Nov (SF1, SF2, SF4, MI1 to MI4, MI6)."""
+
+    def test_settings_file_is_not_overridden_by_flag_defaults(self):  # SF1
+        import run_training as script
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "s.json"
+            path.write_text(json.dumps({"seed": 3, "maze": "M0", "learner": "plain", "purpose": "tuning"}))
+            settings, _ = script.parse_settings(["--condition", FRONTIER, "--settings", str(path), "--out", folder])
+            self.assertEqual((settings.seed, settings.maze, settings.learner, settings.purpose),
+                             (3, "M0", "plain", "tuning"))
+            with self.assertRaises(SystemExit):
+                script.parse_settings(["--condition", FRONTIER, "--maze", "M1", "--settings", str(path),
+                                       "--out", folder])
+            path.write_text(json.dumps({"purpose": "pilot"}))  # k still the placeholder
+            with self.assertRaises(ValueError):
+                script.parse_settings(["--condition", TASK_DIRECTED, "--settings", str(path), "--out", folder])
+
+    def test_suite_refuses_adapter_with_other_learner_settings(self):  # SF2
+        from eval.protocol import task_pairs
+        from eval.suite import _adapt
+        plain = TrainingSettings(condition=TASK_DIRECTED, learner="plain", batch_size=32,
+                                 updates_per_env_step=0.5, adaptation_steps=T)
+        config = evaluation_config_for(plain)
+        self.assertEqual((config.adaptation_gamma, config.adaptation_batch_size), (GAMMA_PLAIN, 32))
+        pair = task_pairs("M1")[0]
+        tasks = [(pair, pair.wall(pair.shorter))]
+        weighted = TrainingSettings(condition=TASK_DIRECTED, batch_size=32, updates_per_env_step=0.5,
+                                    adaptation_steps=T)
+        with self.assertRaises(AssertionError):
+            _adapt(GCSLPolicy(0), tasks, config, adapter_for(weighted), phase=900)
+        _, record, _ = _adapt(GCSLPolicy(0), tasks, config, adapter_for(plain), phase=900)
+        self.assertEqual(record["learner_settings"], {"gamma": GAMMA_PLAIN, "learning_rate": 1e-3,
+                                                      "batch_size": 32})
+
+    def _streams(self, condition):
+        """RNG state before every learner update, and before each episode's action sampling."""
+        import training
+        updates, actions = [], []
+        original_update, original_start = GCSLLearner.update, GCSLPolicy.start_episode
+
+        def update(learner, buffer, rng):
+            updates.append(json.dumps(rng.bit_generator.state, sort_keys=True))
+            return original_update(learner, buffer, rng)
+
+        def start(policy, view, rng, sampled):
+            actions.append(json.dumps(rng.bit_generator.state, sort_keys=True))
+            return original_start(policy, view, rng, sampled)
+
+        with mock.patch.object(GCSLLearner, "update", update), mock.patch.object(GCSLPolicy, "start_episode", start):
+            training.run_training(tiny(condition))
+        return updates, actions
+
+    def test_batch_and_action_streams_are_shared_across_conditions(self):  # SF4: paired seeds
+        demos_updates, _ = self._streams(DEMOS_ONLY)
+        task_updates, task_actions = self._streams(TASK_DIRECTED)
+        frontier_updates, frontier_actions = self._streams(FRONTIER)
+        warmup = TINY["warmup_updates"]
+        self.assertEqual(demos_updates[warmup], task_updates[warmup])      # first practice batch draw
+        self.assertEqual(task_updates[warmup], frontier_updates[warmup])
+        self.assertNotEqual(task_updates[0], task_updates[warmup])          # warm-up has its own stream
+        self.assertEqual(task_actions, frontier_actions)
+        self.assertEqual(len(task_actions), 2)
+
+    def test_validation_set_is_separate_from_d0(self):  # SF4: validation rule (M11, M12)
+        import training
+        d0 = training.build_demonstrations("M1", 2, 0)
+        validation = training.build_demonstrations("M1", 2, 0, seed_tag=training.TAG_VALIDATION)
+        d0_states = {tuple(o) for d in d0 for o in d["observations"]}
+        self.assertFalse({tuple(d["observations"][0]) for d in validation} & d0_states)
+        seen = []
+        original = training.validation_loss
+        with mock.patch.object(training, "validation_loss",
+                               lambda policy, batch: seen.append(batch) or original(policy, batch)):
+            run_training(tiny(TASK_DIRECTED, warmup_rule="validation", warmup_min_updates=20,
+                              warmup_max_updates=40, validation_check_every=20, validation_window=20,
+                              validation_examples=64, validation_per_pair=2, budget_steps=0))
+        self.assertTrue(seen)
+        self.assertFalse({tuple(o) for o in seen[0]["observation"]} & d0_states)
+
+    def test_validation_bounds_must_be_whole_checks(self):  # MI1
+        with self.assertRaises(ValueError):
+            TrainingSettings(condition=TASK_DIRECTED, warmup_rule="validation", warmup_min_updates=30,
+                             warmup_max_updates=100, validation_check_every=30, validation_window=30)
+
+    def test_extra_optimizer_step_fails_the_budget_audit(self):  # MI3
+        original = GCSLLearner.update
+        calls = [0]
+
+        def update(learner, buffer, rng):
+            calls[0] += 1
+            stats = original(learner, buffer, rng)
+            if calls[0] == TINY["warmup_updates"] + 5:
+                torch.optim.SGD(learner.policy.network.parameters(), lr=0.0).step()
+            return stats
+
+        with mock.patch.object(GCSLLearner, "update", update):
+            with self.assertRaisesRegex(AssertionError, "budget audit failed"):
+                run_training(tiny(TASK_DIRECTED))
+
+    def test_demonstration_on_the_wrong_route_is_refused(self):  # MI4
+        import training
+        original = training.make_demonstrations
+
+        def mislabelled(*args, **kwargs):
+            demos = original(*args, **kwargs)
+            demos[0]["route"] = "south" if demos[0]["route"] == "north" else "north"
+            return demos
+
+        with mock.patch.object(training, "make_demonstrations", mislabelled):
+            with self.assertRaisesRegex(AssertionError, "did not drive"):
+                training.build_demonstrations("M1", 2, 0)
+
+    def test_pilot_and_main_need_agreed_settings(self):  # MI6
+        k = 24_960  # 10% of the pilot N, rounded down to whole episodes
+        TrainingSettings(condition=TASK_DIRECTED, purpose="pilot", adaptation_steps=k)
+        for bad in ({"demos_per_pair": 2}, {"batch_size": 32}, {"maze": "M0"}, {"adaptation_steps": 0},
+                    {"adaptation_steps": 1500}, {"budget_steps": 99_960}):
+            with self.assertRaises(ValueError, msg=bad):
+                TrainingSettings(condition=TASK_DIRECTED, purpose="pilot", **{"adaptation_steps": k, **bad})
+        with self.assertRaises(ValueError):
+            TrainingSettings(condition=TASK_DIRECTED, learning_rate=0.0)
 
 
 if __name__ == "__main__":

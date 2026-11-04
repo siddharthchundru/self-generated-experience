@@ -39,10 +39,12 @@ from training import CONDITIONS, TrainingSettings, run_training, settings_from_d
 def parse_settings(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--condition", choices=CONDITIONS, required=True)
-    parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--maze", choices=("M0", "M1"), default="M1")
-    parser.add_argument("--learner", choices=("weighted", "plain"), default="weighted")
-    parser.add_argument("--purpose", default="smoke")
+    # No defaults here: an unset flag leaves the settings file's value (or the
+    # TrainingSettings default) in place (audit of 4 Nov, SF1).
+    parser.add_argument("--seed", type=int)
+    parser.add_argument("--maze", choices=("M0", "M1"))
+    parser.add_argument("--learner", choices=("weighted", "plain"))
+    parser.add_argument("--purpose")
     parser.add_argument("--budget-steps", type=int)
     parser.add_argument("--updates-per-env-step", type=float)
     parser.add_argument("--learning-rate", type=float)
@@ -51,11 +53,15 @@ def parse_settings(argv=None):
     parser.add_argument("--allow-dirty", action="store_true")
     args = parser.parse_args(argv)
     values = json.loads(args.settings.read_text()) if args.settings else {}
-    values.update({"condition": args.condition, "seed": args.seed, "maze": args.maze,
-                   "learner": args.learner, "purpose": args.purpose})
-    for name in ("budget_steps", "updates_per_env_step", "learning_rate"):
-        if getattr(args, name) is not None:
-            values[name] = getattr(args, name)
+    for name in ("condition", "seed", "maze", "learner", "purpose", "budget_steps", "updates_per_env_step",
+                 "learning_rate"):
+        flag = getattr(args, name)
+        if flag is None:
+            continue
+        if name in values and values[name] != flag:
+            raise SystemExit(f"--{name.replace('_', '-')} {flag} conflicts with {values[name]!r} "
+                             "in the settings file")
+        values[name] = flag
     return settings_from_dict(values), args
 
 
@@ -67,8 +73,8 @@ def main(argv=None):
     guard_results_write(ROOT, args.out, args.allow_dirty)
     out = args.out
     out.mkdir(parents=True, exist_ok=True)
-    if (out / "summary.json").exists():
-        raise SystemExit(f"{out} already holds a finished run; choose another folder")
+    if any(out.iterdir()):  # never overwrite a run, finished or crashed (audit of 4 Nov, MI6)
+        raise SystemExit(f"{out} is not empty; choose another folder")
     record["allow_dirty"] = args.allow_dirty
     record["torch_threads"] = {"intra_op": torch.get_num_threads(), "inter_op": torch.get_num_interop_threads()}
     (out / "run_record.json").write_text(json.dumps(record, indent=2))

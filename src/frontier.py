@@ -23,11 +23,17 @@ Settings (spec section 6, "Frontier novelty (C4) implementation"):
 - no achievability cutoff and no Go Exploration (deviations from MEGA,
   confirmed by Siddharth on 28 Oct).
 
-Not decided by the spec, chosen here and exposed as a parameter (listed for
-Siddharth's review in the PR and in spec v0.14):
-- "normalised positions": positions are divided by `position_scale`,
-  default 5.0, the same fixed scaling the policy network applies to its
-  inputs (`gcsl.POSITION_SCALE`). With it, bandwidth 0.1 is half a cell.
+"Normalised positions" (the spec says "as in MEGA"): MEGA's code
+(`mrl/modules/density.py`, `RawKernelDensity`, `normalize=True` by default)
+standardises each axis by the mean and standard deviation (plus 1e-4) of the
+points it fits, and applies the same shift and scale to the points it scores.
+That is the default here, `normalisation="standardise"`, recomputed at every
+refit. With D0 alone on M1 (standard deviations about 2.3 cells per axis)
+bandwidth 0.1 is then about 0.23 cells, and it widens as the data spreads.
+The alternative, `normalisation="fixed"`, divides by `position_scale` (default
+5.0, the policy's own input scaling), which keeps the bandwidth at 0.5 cells
+throughout. Found by the audit of 4 Nov (SF3); recorded in spec v0.14 for
+Siddharth's review.
 
 The kernel density is evaluated up to a constant factor (the normalising
 constant does not change which candidate is lowest), in float64.
@@ -40,6 +46,7 @@ from gcsl import POSITION_SCALE
 CANDIDATES = 100
 BANDWIDTH = 0.1
 DENSITY_FIT_POINTS = 10_000
+NORMALISATIONS = ("standardise", "fixed")
 
 
 class FrontierSelector:
@@ -51,9 +58,12 @@ class FrontierSelector:
     """
 
     def __init__(self, candidates=CANDIDATES, bandwidth=BANDWIDTH,
-                 fit_points=DENSITY_FIT_POINTS, position_scale=POSITION_SCALE):
+                 fit_points=DENSITY_FIT_POINTS, position_scale=POSITION_SCALE, normalisation="standardise"):
         if candidates <= 0 or fit_points <= 0 or bandwidth <= 0 or position_scale <= 0:
             raise ValueError("frontier settings must be positive")
+        if normalisation not in NORMALISATIONS:
+            raise ValueError(f"unknown normalisation {normalisation!r}")
+        self.normalisation = normalisation
         self.candidates = candidates
         self.bandwidth = bandwidth
         self.fit_points = fit_points
@@ -76,10 +86,19 @@ class FrontierSelector:
     def achieved(self):
         return self._positions[:self._size]
 
+    def normaliser(self, fitted):
+        """(shift, scale) applied to positions before the kernel: MEGA's per-axis
+        standardisation by the fitted points, or the fixed division."""
+        fitted = np.asarray(fitted, dtype=np.float64)
+        if self.normalisation == "standardise":
+            return fitted.mean(axis=0), fitted.std(axis=0) + 1e-4
+        return np.zeros(2), np.full(2, self.position_scale)
+
     def log_density(self, points, fitted):
         """Log of the (unnormalised) Gaussian kernel density of `fitted` at `points`."""
-        a = np.asarray(points, dtype=np.float64) / self.position_scale
-        b = np.asarray(fitted, dtype=np.float64) / self.position_scale
+        shift, scale = self.normaliser(fitted)
+        a = (np.asarray(points, dtype=np.float64) - shift) / scale
+        b = (np.asarray(fitted, dtype=np.float64) - shift) / scale
         squared = ((a[:, None, :] - b[None, :, :]) ** 2).sum(-1)
         exponents = -squared / (2 * self.bandwidth ** 2)
         top = exponents.max(axis=1, keepdims=True)
@@ -95,6 +114,8 @@ class FrontierSelector:
         fitted = achieved[rng.choice(len(achieved), size=fit_size, replace=False)]
         log_density = self.log_density(candidates, fitted)
         best = int(np.argmin(log_density))
+        _, scale = self.normaliser(fitted)
         return candidates[best].copy(), {"log_density": float(log_density[best]),
+                                         "bandwidth_in_cells": [float(self.bandwidth * v) for v in scale],
                                          "median_candidate_log_density": float(np.median(log_density)),
                                          "fit_points": fit_size}

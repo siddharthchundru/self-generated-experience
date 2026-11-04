@@ -41,7 +41,8 @@ Undecided settings, each a parameter with its current default (audit of 4 Nov,
 - k (`adaptation_steps`), placeholder 960; refused for pilot and main runs.
 - start distribution, random actions' rule and expert top-up's route split:
   see `collection.py`.
-- frontier novelty's position normalisation: see `frontier.py`.
+- frontier novelty's position normalisation: see `frontier.py` (default
+  MEGA's per-axis standardisation, after the audit of 4 Nov, SF3).
 """
 
 from dataclasses import asdict, dataclass, fields
@@ -60,7 +61,7 @@ from envs.mazes import RINGS
 from envs.pointmaze import xy_to_cell
 from episode import EPISODE_STEPS, whole_episodes
 from eval.protocol import EvaluationConfig
-from frontier import BANDWIDTH, CANDIDATES, DENSITY_FIT_POINTS, FrontierSelector
+from frontier import BANDWIDTH, CANDIDATES, DENSITY_FIT_POINTS, NORMALISATIONS, FrontierSelector
 from gcsl import (GAMMA_PLAIN, GAMMA_WEIGHTED, POSITION_SCALE, GCSLAdapter, GCSLLearner, GCSLPolicy,
                   TrajectoryBuffer, updates_per_episode, weighted_loss)
 from routes import trajectory_route
@@ -116,7 +117,8 @@ class TrainingSettings:
     frontier_candidates: int = CANDIDATES
     frontier_bandwidth: float = BANDWIDTH
     frontier_fit_points: int = DENSITY_FIT_POINTS
-    frontier_position_scale: float = POSITION_SCALE
+    frontier_position_scale: float = POSITION_SCALE   # used only by the "fixed" normalisation
+    frontier_normalisation: str = "standardise"
     # Recovery adaptation, for the evaluation that follows a run (SF4; k and decision 14 open).
     adaptation_steps: int = K_PLACEHOLDER
     adaptation_fresh_optimizer: bool = True
@@ -149,10 +151,24 @@ class TrainingSettings:
             raise ValueError("k = 960 is a placeholder; set k by the spec section 8 rule before the pilot")
         if self.warmup_updates < 0 or self.lr_warmup_steps < 0 or self.batch_size <= 0:
             raise ValueError("counts must be non-negative")
+        if not self.learning_rate > 0:
+            raise ValueError("the learning rate must be positive")
+        if self.frontier_normalisation not in NORMALISATIONS:
+            raise ValueError("unknown frontier normalisation")
+        if self.purpose in ("pilot", "main"):
+            # Agreed settings (spec v0.13) and the k rule (spec section 8); audit of 4 Nov, MI6.
+            k_grid = {int(self.budget_steps * f // EPISODE_STEPS) * EPISODE_STEPS for f in (0.05, 0.10, 0.20)}
+            if (self.maze != "M1" or self.batch_size != 256 or self.demos_per_pair != DEMOS_PER_PAIR
+                    or self.budget_steps not in (PILOT_BUDGET, CAP_BUDGET)
+                    or self.adaptation_steps not in k_grid):
+                raise ValueError("pilot and main runs use M1, batch 256, 20 demonstrations per pair, "
+                                 "N of 249,960 or 999,960, and k from the 5/10/20% grid of N")
         if self.warmup_rule == "validation" and not (
                 0 < self.warmup_min_updates <= self.warmup_max_updates
                 and self.validation_check_every > 0 and self.validation_window > 0
-                and self.validation_window % self.validation_check_every == 0):
+                and self.validation_window % self.validation_check_every == 0
+                and self.warmup_min_updates % self.validation_check_every == 0
+                and self.warmup_max_updates % self.validation_check_every == 0):
             raise ValueError("inconsistent validation warm-up settings")
 
     @property
@@ -186,7 +202,9 @@ def adapter_for(settings):
 def evaluation_config_for(settings):
     """Evaluation settings whose adaptation budget and ratio match training (audit SF4)."""
     return EvaluationConfig(maze=settings.maze, adaptation_steps=settings.adaptation_steps,
-                            adaptation_updates_per_env_step=settings.updates_per_env_step)
+                            adaptation_updates_per_env_step=settings.updates_per_env_step,
+                            adaptation_gamma=settings.gamma, adaptation_learning_rate=settings.learning_rate,
+                            adaptation_batch_size=settings.batch_size)
 
 
 # --- Demonstrations ------------------------------------------------------------------
@@ -296,6 +314,7 @@ def warm_up(settings, d0_buffer):
             best_before, best_now = min(losses[:-lag]), min(losses)
             if best_now > (1 - settings.validation_min_improvement) * best_before:
                 break
+        log["validation_demonstrations"] = len(validation)
     log.update({"updates": learner.gradient_steps, "optimizer_steps": _adam_steps(learner.optimizer),
                 **{f"batch_{k}": v for k, v in exposure.summary().items() if k != "updates"}})
     return policy, log
@@ -342,6 +361,8 @@ def _run(settings, on_episode, started, counted):
 
     # Adam reset (spec v0.12): a new learner, so a new optimiser; weights carry over.
     learner = GCSLLearner(policy, s.gamma, s.learning_rate, s.batch_size, s.lr_warmup_steps)
+    if learner.optimizer.state or policy.parameter_digest() != pretrained_digest:  # audit of 4 Nov, MI2
+        raise AssertionError("practice must start from the pretrained weights with an empty Adam state")
     rng = np.random.default_rng(np.random.SeedSequence([s.seed, TAG_PRACTICE]))
     per_episode = updates_per_episode(s.updates_per_env_step)
     exposure = _Exposure(s.maze)
@@ -352,7 +373,7 @@ def _run(settings, on_episode, started, counted):
     selector = None
     if s.condition == FRONTIER:
         selector = FrontierSelector(s.frontier_candidates, s.frontier_bandwidth, s.frontier_fit_points,
-                                    s.frontier_position_scale)
+                                    s.frontier_position_scale, s.frontier_normalisation)
         for d in demonstrations:
             selector.add_positions(d["observations"])
     collector = None
@@ -403,10 +424,13 @@ def _run(settings, on_episode, started, counted):
         if collector is not None:
             collector.close()
 
+    if selector is not None and len(selector.achieved) != len(buffer) * (EPISODE_STEPS + 1):
+        raise AssertionError("frontier novelty's achieved positions differ from its buffer's")  # audit SF4
     budget = _budget_audit(s, env_steps, learner, warmup_log, counted[0], len(buffer), len(demonstrations))
     summary = {
         "settings": asdict(s), "gamma": s.gamma,
         "demonstrations": len(demonstrations),
+        "warmup_key": s.warmup_key(),
         "pretrained_digest": pretrained_digest, "final_digest": policy.parameter_digest(),
         "warmup": warmup_log, "budget": budget,
         "commanded_held_out_goals": collected_goal_cells_held_out,

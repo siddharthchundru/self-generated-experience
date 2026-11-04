@@ -54,6 +54,13 @@ class EvaluationConfig:
     # Gradient steps per adaptation environment step; must equal the training ratio
     # (spec section 8). Learned adapters are checked against it; the stand-in uses 0.
     adaptation_updates_per_env_step: float = 1.0
+    # The learner settings adaptation must share with training (audit of 30 Oct,
+    # SF4; audit of 4 Nov, SF2). None leaves them unchecked (the Stage 1 stand-ins
+    # and the interface tests); `training.evaluation_config_for` always sets them,
+    # and then the suite refuses an adapter whose settings differ.
+    adaptation_gamma: float | None = None
+    adaptation_learning_rate: float | None = None
+    adaptation_batch_size: int | None = None
 
     def __post_init__(self):
         if self.horizon != EPISODE_STEPS:

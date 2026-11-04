@@ -153,6 +153,22 @@ class TestGoalLeakage(unittest.TestCase):
         self.assertTrue(record["goal_in_held_out"])
         self.assertEqual(tuple(record["goal_cell"]), xy_to_cell(GRID, point))
 
+    def test_per_episode_assertion_catches_a_held_out_goal(self):  # audit of 4 Nov, MI4
+        held = cell_to_xy(GRID, sorted(M1_HELD_OUT_REGION)[0])
+        collector = make(TASK_DIRECTED)
+        original = collector.env.reset
+
+        def reset(**kwargs):
+            obs, info = original(**kwargs)
+            return {**obs, "desired_goal": held.copy()}, info
+
+        collector.env.reset = reset
+        try:
+            with self.assertRaisesRegex(AssertionError, "held-out goal"):
+                collector.run_episode(0)
+        finally:
+            collector.close()
+
     def test_constructor_pairs_conditions_with_actors(self):
         with self.assertRaises(ValueError):
             Collector(TASK_DIRECTED, "M1", 0)                                   # no policy
@@ -189,12 +205,26 @@ class TestForks(unittest.TestCase):
 class TestFrontierSelector(unittest.TestCase):
     def test_log_density_matches_brute_force(self):
         rng = np.random.default_rng(0)
-        fitted = rng.normal(size=(50, 2))
-        points = rng.normal(size=(7, 2))
-        selector = FrontierSelector(bandwidth=0.1, position_scale=5.0)
-        a, b = points / 5.0, fitted / 5.0
-        brute = np.log(np.mean(np.exp(-((a[:, None] - b[None]) ** 2).sum(-1) / (2 * 0.01)), axis=1))
-        np.testing.assert_allclose(selector.log_density(points, fitted), brute, rtol=1e-9, atol=1e-9)
+        fitted = rng.normal(loc=[1.0, -2.0], scale=[2.0, 0.5], size=(50, 2))
+        points = fitted[:7] + rng.normal(scale=0.05, size=(7, 2))  # near the data, so the brute force stays finite
+        fixed = FrontierSelector(bandwidth=0.1, position_scale=5.0, normalisation="fixed")
+        mega = FrontierSelector(bandwidth=0.1)  # default: MEGA's per-axis standardisation
+        mean, std = fitted.mean(0), fitted.std(0) + 1e-4
+        for selector, (a, b) in ((fixed, (points / 5.0, fitted / 5.0)),
+                                 (mega, ((points - mean) / std, (fitted - mean) / std))):
+            brute = np.log(np.mean(np.exp(-((a[:, None] - b[None]) ** 2).sum(-1) / (2 * 0.01)), axis=1))
+            np.testing.assert_allclose(selector.log_density(points, fitted), brute, rtol=1e-9, atol=1e-9)
+        with self.assertRaises(ValueError):
+            FrontierSelector(normalisation="minmax")
+
+    def test_candidates_are_drawn_from_every_achieved_position(self):  # audit of 4 Nov, M21
+        positions = np.stack([np.arange(20_000.0), np.zeros(20_000)], axis=1)
+        selector = FrontierSelector(candidates=1, fit_points=10)
+        selector.add_positions(positions)
+        for seed in range(20):
+            expected = positions[np.random.default_rng(seed).integers(20_000)]
+            goal, _ = selector.choose(np.random.default_rng(seed))
+            np.testing.assert_array_equal(goal, expected)
 
     def test_chooses_the_isolated_point(self):
         selector = FrontierSelector(candidates=2000, fit_points=10_000)
