@@ -3,7 +3,8 @@
 What this file does, in one sentence: `run_training(settings)` builds D0,
 warms the learner up on it, resets Adam, runs one condition's practice for a
 whole-episode budget N, logs every environment step and gradient step for the
-budget audit, and returns the pretrained and final policies with the logs.
+budget audit, and returns the pretrained and final policies, the final buffer
+(for the re-learning control, `relearning.py`) and the logs.
 
 Why it matters: every condition goes through this one function, so they share
 everything except the goal rule (spec sections 5 to 7):
@@ -282,15 +283,17 @@ def validation_loss(policy, batch):
                                    torch.from_numpy(batch["weight"]).float()))
 
 
-def warm_up(settings, d0_buffer):
+def warm_up(settings, d0_buffer, init_tag=TAG_INIT, stream_tag=TAG_WARMUP):
     """Train a seed-initialised policy on D0 alone. Returns (policy, log).
 
     The warm-up learner (and its Adam) is discarded afterwards: practice starts
-    a new one (spec v0.12).
+    a new one (spec v0.12). `init_tag` and `stream_tag` select the initial
+    weights and the batch stream; the re-learning control passes its own tags
+    for a fresh learner (`relearning.py`).
     """
-    policy = GCSLPolicy(int(np.random.SeedSequence([settings.seed, TAG_INIT]).generate_state(1)[0]))
+    policy = GCSLPolicy(int(np.random.SeedSequence([settings.seed, init_tag]).generate_state(1)[0]))
     learner = GCSLLearner(policy, settings.gamma, settings.learning_rate, settings.batch_size)
-    rng = np.random.default_rng(np.random.SeedSequence([settings.seed, TAG_WARMUP]))
+    rng = np.random.default_rng(np.random.SeedSequence([settings.seed, stream_tag]))
     exposure = _Exposure(settings.maze)
     log = {"rule": settings.warmup_rule, "checks": []}
     if settings.warmup_rule == "fixed":
@@ -428,10 +431,12 @@ def _run(settings, on_episode, started, counted):
         raise AssertionError("frontier novelty's achieved positions differ from its buffer's")  # audit SF4
     budget = _budget_audit(s, env_steps, learner, warmup_log, counted[0], len(buffer), len(demonstrations))
     summary = {
+        "kind": "training",
         "settings": asdict(s), "gamma": s.gamma,
         "demonstrations": len(demonstrations),
         "warmup_key": s.warmup_key(),
         "pretrained_digest": pretrained_digest, "final_digest": policy.parameter_digest(),
+        "final_buffer_digest": buffer.digest(),
         "warmup": warmup_log, "budget": budget,
         "commanded_held_out_goals": collected_goal_cells_held_out,
         "data_diversity": diversity.summary(),
@@ -440,7 +445,8 @@ def _run(settings, on_episode, started, counted):
         "wall_clock_seconds": {"warmup": warmup_seconds, "total": time.perf_counter() - started},
     }
     return {"summary": summary, "episodes": log, "pretrained_state": pretrained_state,
-            "final_state": {k: v.clone() for k, v in policy.network.state_dict().items()}}
+            "final_state": {k: v.clone() for k, v in policy.network.state_dict().items()},
+            "final_buffer": buffer.to_arrays()}
 
 
 def _interleaved_due(ratio):

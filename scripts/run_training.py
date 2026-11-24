@@ -12,8 +12,10 @@ stops after warm-up, which is what the precondition check needs.
 Writes into OUT: settings.json, run_record.json (commit, dirty flag, source
 hashes, machine, package versions, taken at start), episodes.jsonl (one line
 per practice episode, written as it finishes), summary.json (budget audit,
-data diversity, exposure totals, wall-clock) and pretrained.pt / final.pt (the
-policy network's weights). Writing into results/ needs a clean, committed
+data diversity, exposure totals, wall-clock), pretrained.pt / final.pt (the
+policy network's weights) and final_buffer.npz (every trajectory the run
+trained on, D0 included, as the learner stores them; the re-learning control
+trains on it, and its digest is in summary.json). Writing into results/ needs a clean, committed
 working tree; anything else (a scratch folder) is always allowed and is not a
 filed result. --allow-dirty marks an exploratory run.
 
@@ -27,6 +29,8 @@ from dataclasses import asdict
 import json
 from pathlib import Path
 import sys
+
+import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -87,6 +91,7 @@ def main(argv=None):
         result = run_training(settings, on_episode=write)
     torch.save(result["pretrained_state"], out / "pretrained.pt")
     torch.save(result["final_state"], out / "final.pt")
+    np.savez_compressed(out / "final_buffer.npz", **result["final_buffer"])
     (out / "summary.json").write_text(json.dumps(result["summary"], indent=2))
     budget = result["summary"]["budget"]
     print(f"{settings.condition} seed {settings.seed} ({settings.learner}, {settings.maze}): "

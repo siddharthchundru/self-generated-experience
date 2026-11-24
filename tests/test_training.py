@@ -178,10 +178,16 @@ class TestScript(unittest.TestCase):
             script.main(["--condition", "random_actions", "--budget-steps", str(T),
                          "--settings", str(settings), "--out", str(out)])
             for name in ("settings.json", "run_record.json", "episodes.jsonl", "summary.json",
-                         "pretrained.pt", "final.pt"):
+                         "pretrained.pt", "final.pt", "final_buffer.npz"):
                 self.assertTrue((out / name).exists(), name)
             self.assertEqual(len((out / "episodes.jsonl").read_text().splitlines()), 1)
             torch.load(out / "final.pt")
+            import runs  # the saved buffer matches the digest the run recorded
+            summary = json.loads((out / "summary.json").read_text())
+            self.assertEqual(summary["kind"], "training")
+            buffer = runs.load_buffer(out)
+            self.assertEqual(len(buffer), summary["budget"]["expected_buffer_trajectories"])
+            self.assertEqual(buffer.sources.count("random_actions"), 1)
             with self.assertRaises(SystemExit):  # a finished run is never overwritten
                 script.main(["--condition", "random_actions", "--budget-steps", str(T),
                              "--settings", str(settings), "--out", str(out)])

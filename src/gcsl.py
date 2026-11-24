@@ -202,6 +202,44 @@ class TrajectoryBuffer:
         """Positions (T+1, 2) of stored trajectory `index`, e.g. for the data-diversity log."""
         return self._observations[index, :, :2]
 
+    def to_arrays(self):
+        """The stored data exactly as training samples it: observations, action bins,
+        commanded goals and each trajectory's source. Saved with a run so the
+        re-learning control can train on the final buffer (spec section 7)."""
+        return {"observations": self._observations[:self._size].copy(),
+                "action_bins": self._actions[:self._size].copy(),
+                "goals": self._goals[:self._size].copy(),
+                "sources": np.array(self.sources, dtype=str)}
+
+    @classmethod
+    def from_arrays(cls, arrays, episode_steps=EPISODE_STEPS):
+        """Rebuild a buffer from `to_arrays()` output. Action bins are stored as they
+        were, so nothing is rounded twice."""
+        buffer = cls(episode_steps)
+        observations = np.asarray(arrays["observations"], dtype=np.float32)
+        bins = np.asarray(arrays["action_bins"], dtype=np.int16)
+        n = len(observations)
+        if (observations.shape != (n, episode_steps + 1, 4) or bins.shape != (n, episode_steps)
+                or len(arrays["goals"]) != n or len(arrays["sources"]) != n):
+            raise ValueError("saved buffer arrays do not describe whole T-step trajectories")
+        if n and (bins.min() < 0 or bins.max() >= NUM_ACTIONS):
+            raise ValueError("saved action bins fall outside the 9 x 9 grid")
+        buffer._observations = observations.copy()
+        buffer._actions = bins.copy()
+        buffer._goals = np.asarray(arrays["goals"], dtype=np.float32).copy()
+        buffer.sources = [str(s) for s in arrays["sources"]]
+        buffer._size = n
+        return buffer
+
+    def digest(self):
+        """SHA-256 over the stored arrays and sources, to tie a saved buffer to its run."""
+        digest = hashlib.sha256()
+        for name, array in self.to_arrays().items():
+            digest.update(name.encode())
+            digest.update(np.ascontiguousarray(array).tobytes() if name != "sources"
+                          else "\n".join(array.tolist()).encode())
+        return digest.hexdigest()
+
     def sample(self, batch_size, rng, gamma):
         """A relabelled batch: (observation, goal, action bin, weight, gap t' - t)."""
         if self._size == 0:
