@@ -85,3 +85,34 @@ def guard_results_write(root: Path, output: Path, allow_dirty: bool) -> dict:
         raise SystemExit(f"refusing to write {output}: {reason}. Commit first, write "
                          "outside results/, or pass --allow-dirty for an exploratory run.")
     return state
+
+
+CLAIM = ".claimed"
+
+
+def claim_output_folder(folder: Path) -> None:
+    """Create `folder` and claim it for one process, or raise SystemExit.
+
+    The claim is a marker file created with O_EXCL, so of two processes racing
+    for one folder exactly one succeeds (audit of 24 Nov, SF3). A folder that
+    already holds anything, finished or crashed, is never reused.
+    """
+    import os
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    try:
+        os.close(os.open(folder / CLAIM, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+    except FileExistsError:
+        raise SystemExit(f"{folder} is claimed by another run; choose another folder") from None
+    if any(p.name != CLAIM for p in folder.iterdir()):
+        raise SystemExit(f"{folder} is not empty; choose another folder")
+
+
+def write_text_atomic(path: Path, text: str) -> None:
+    """Write `text` so that `path` appears whole or not at all (audit of 24 Nov, MI4):
+    summary.json marks a run as finished, so a half-written one must never exist."""
+    import os
+    path = Path(path)
+    partial = path.with_name(path.name + ".partial")
+    partial.write_text(text)
+    os.replace(partial, path)

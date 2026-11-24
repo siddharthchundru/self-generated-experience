@@ -51,8 +51,9 @@ class TestRelearning(unittest.TestCase):
         cls.buffer = TrajectoryBuffer.from_arrays(cls.original["final_buffer"])
 
     def relearn(self, **kwargs):
-        with mock.patch("envs.pointmaze.make_env", no_environment), \
-                mock.patch("collection.make_env", no_environment, create=True):
+        with mock.patch("gymnasium.make", no_environment), mock.patch("envs.pointmaze.make_env", no_environment), \
+                mock.patch("collection.make_env", no_environment, create=True), \
+                mock.patch("demonstrations.make_env", no_environment, create=True):
             return run_relearning(self.settings, self.original["summary"], self.buffer, **kwargs)
 
     def test_buffer_round_trip(self):
@@ -121,10 +122,16 @@ class TestRelearning(unittest.TestCase):
     def test_refusals(self):
         summary = self.original["summary"]
         arrays = self.buffer.to_arrays()
-        tampered = {k: v.copy() for k, v in arrays.items()}
-        tampered["action_bins"][-1, 0] = (tampered["action_bins"][-1, 0] + 1) % 81
-        with self.assertRaisesRegex(ValueError, "differs from the one"):
-            run_relearning(self.settings, summary, TrajectoryBuffer.from_arrays(tampered))
+        for name in arrays:  # every array is covered by the digest (M22)
+            tampered = {k: v.copy() for k, v in arrays.items()}
+            if name == "action_bins":
+                tampered[name][-1, 0] = (tampered[name][-1, 0] + 1) % 81
+            elif name == "sources":
+                tampered[name][-1] = "expert_top_up"
+            else:
+                tampered[name].flat[-1] += 0.25
+            with self.assertRaisesRegex(ValueError, "differs from the one", msg=name):
+                run_relearning(self.settings, summary, TrajectoryBuffer.from_arrays(tampered))
         failed = copy.deepcopy(summary)
         failed["budget"]["passed"] = False
         with self.assertRaisesRegex(ValueError, "budget audit"):
@@ -142,6 +149,25 @@ class TestRelearning(unittest.TestCase):
                                        adaptation_steps=24_960)
         with self.assertRaisesRegex(ValueError, "main \\(weighted\\) learner"):
             run_relearning(pilot_plain, summary, self.buffer)
+
+    def test_carried_over_adam_state_is_caught(self):  # M5
+        from gcsl import GCSLLearner, GCSLPolicy
+        from training import assert_fresh_adam
+        policy = GCSLPolicy(0)
+        warm = GCSLLearner(policy, 0.962, 1e-3, 32)
+        for _ in range(5):
+            warm.update(self.buffer, np.random.default_rng(0))
+        fresh = GCSLLearner(policy, 0.962, 1e-3, 32)
+        fresh.update(self.buffer, np.random.default_rng(1))
+        assert_fresh_adam(fresh.optimizer)  # passes
+        carried = GCSLLearner(policy, 0.962, 1e-3, 32)
+        state = warm.optimizer.state_dict()
+        for entry in state["state"].values():
+            entry["step"].zero_()  # step counter zeroed, running averages kept
+        carried.optimizer.load_state_dict(state)
+        carried.update(self.buffer, np.random.default_rng(1))
+        with self.assertRaisesRegex(AssertionError, "not empty"):
+            assert_fresh_adam(carried.optimizer)
 
     def test_tags_are_distinct_from_training(self):
         import training

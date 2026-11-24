@@ -21,8 +21,9 @@ Options:
 - --skip-adaptation leaves out the two adaptation runs (A_k is reported as not
   run). For the precondition check, which needs Rep of the pretrained policy
   only.
-- --quick shrinks rollout counts and k for a smoke test. Refused for pilot and
-  main runs, and marked in the output.
+- --quick shrinks rollout counts and k for a smoke test. It changes the
+  measures (Rep's minimum successes, k), so it is refused for every purpose
+  except smoke, and marked in the output.
 
 Writes OUT (default RUN_FOLDER/evaluation_<which>.json; never overwritten),
 holding this script's run record, the run's identity and the suite's full
@@ -52,8 +53,8 @@ QUICK = {"sampled_rollouts": 10, "minimum_successes": 2, "greedy_rollouts": 2, "
 
 def build(settings, quick=False, skip_adaptation=False):
     """(evaluation config, adapter or None) for a run's settings."""
-    if quick and settings.purpose in ("pilot", "main"):
-        raise SystemExit("--quick is for smoke tests; pilot and main runs use the full protocol")
+    if quick and settings.purpose != "smoke":  # audit of 24 Nov, SF4: --quick changes the measures
+        raise SystemExit("--quick is for smoke runs only; every other purpose uses the full protocol")
     if settings.purpose in ("pilot", "main") and settings.adaptation_steps == K_PLACEHOLDER:
         raise SystemExit("k = 960 is a placeholder; set k by the spec section 8 rule before the pilot")
     config = evaluation_config_for(settings)
@@ -79,9 +80,14 @@ def main(argv=None):
         raise SystemExit(f"{out} exists; evaluations are never overwritten")
     config, adapter = build(settings, args.quick, args.skip_adaptation)
     policy = load_policy(args.run, args.which)
+    evaluated_digest = policy.parameter_digest()  # of the policy handed to the suite (audit of 24 Nov, M8)
+    if evaluated_digest != summary[f"{args.which}_digest"]:
+        raise AssertionError("the policy about to be evaluated is not the run's")
     record = run_record(ROOT)
     guard_results_write(ROOT, out, args.allow_dirty)
+    import torch
     record["allow_dirty"] = args.allow_dirty
+    record["torch_threads"] = {"intra_op": torch.get_num_threads(), "inter_op": torch.get_num_interop_threads()}
 
     report = evaluate_policy(policy, config, adapter)
     if report["parameter_digest"] is None:
@@ -90,7 +96,7 @@ def main(argv=None):
         **record,
         "run": {"folder": str(args.run.resolve()), "kind": summary.get("kind", "training"),
                 "init": summary.get("init"), "which": args.which, "settings": asdict(settings),
-                "policy_digest": summary[f"{args.which}_digest"],
+                "policy_digest": evaluated_digest,
                 "training_commit": source_record.get("git_commit"),
                 "same_commit_as_training": source_record.get("git_commit") == record["git_commit"]},
         "evaluation": {"quick_smoke_only": args.quick, "adaptation_run": adapter is not None,
@@ -98,9 +104,14 @@ def main(argv=None):
         "report": report,
     }
     out.parent.mkdir(parents=True, exist_ok=True)
-    partial = out.with_name(out.name + ".partial")
+    partial = out.with_name(f"{out.name}.{os.getpid()}.partial")
     partial.write_text(json.dumps(result, indent=2, allow_nan=False) + "\n")
-    os.replace(partial, out)  # the finished file appears whole or not at all
+    try:  # appears whole or not at all, and never replaces an existing file (audit of 24 Nov, SF3)
+        os.link(partial, out)
+    except FileExistsError:
+        raise SystemExit(f"{out} was written by another evaluation meanwhile; this one is discarded") from None
+    finally:
+        partial.unlink()
     aggregate = report["aggregate"]
     print(json.dumps({"run": str(args.run), "which": args.which, "S_in": aggregate["S_in"],
                       "Rep": aggregate["Rep"], "A_0": aggregate["A_0"], "A_k": aggregate["A_k"],

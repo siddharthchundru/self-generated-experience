@@ -129,7 +129,7 @@ def _relearn(s, original, buffer, init, on_chunk, started, counted):
     for index in range(s.practice_episodes):
         exposure.reset()
         for _ in range(per_chunk):
-            _step(learner, buffer, rng, exposure)
+            _step(learner, buffer, rng, exposure, check_fresh=True)
         row = {"chunk": index, "gradient_steps": learner.gradient_steps,
                "learning_rate": learner.current_learning_rate(), "batches": exposure.summary()}
         log.append(row)
@@ -158,6 +158,9 @@ def _relearn(s, original, buffer, init, on_chunk, started, counted):
                    "final_digest": original["final_digest"],
                    "final_buffer_digest": original["final_buffer_digest"],
                    "warmup_rule": s.warmup_rule},
+        # The re-learner's own warm-up always uses the fixed rule at the recorded
+        # length, whatever the source used (audit of 24 Nov, MI6).
+        "warmup_rule_used": "fixed", "warmup_key_used": warmup_settings.warmup_key(),
         "demonstrations": demos,
         "warmup_key": s.warmup_key(),
         "pretrained_digest": pretrained_digest, "final_digest": policy.parameter_digest(),

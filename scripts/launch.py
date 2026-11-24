@@ -19,7 +19,7 @@ The plan (JSON):
       "evaluate": {"final": true, "pretrained": true, "skip_adaptation": false, "quick": false},
       "relearning": {"enabled": false, "init": "fresh"}
     }
-Only "out" and "seeds" are required. Defaults: every condition, no plain arm,
+"out", "seeds" and settings["purpose"] are required. Defaults: every condition, no plain arm,
 final and pretrained policies evaluated with adaptation, no re-learning.
 "settings" may not set condition, seed or learner: the launcher sets those
 per run.
@@ -33,20 +33,25 @@ Jobs and their order:
 - re-learn: after its training run, main learner only ->
   OUT/relearning/<condition>/seed<N>/, then its evaluation.
 A job whose finished output already exists is skipped, so rerunning the same
-plan resumes it. A run folder left by a crash (files but no summary.json) is a
+plan resumes it, but only if that output was made with this plan's settings
+(runs) or evaluation protocol (evaluations); otherwise the job fails, so one
+launch folder can never mix budgets, ratios or k. A run folder left by a crash (files but no summary.json) is a
 failure unless --retry-incomplete, which renames it to <folder>.incomplete-<time>
 and runs the job again. A failed job's dependants are skipped.
 
-Before anything runs, every run's settings are built and checked (so a pilot
-plan with the k placeholder fails here, not in 60 processes), and a plan
-writing into results/ needs a clean, committed tree (--allow-dirty passes
-through to every job). Afterwards the launcher runs the pretrained check over
+Before anything runs, every run's settings and evaluation protocol are built
+and checked (so a pilot plan with the k placeholder, or with quick
+evaluation, fails here, not in 60 processes), and a plan writing into
+results/ needs a clean, committed tree (--allow-dirty passes through to every
+job). One launch at a time per output folder (OUT/.launch.lock); if the
+launcher stops for any reason, its running jobs are terminated and the
+manifest is still written. Afterwards the launcher runs the pretrained check over
 every run in OUT and writes OUT/launch_manifest.json: the plan, the commit,
 and every job's command, status, duration and log file (OUT/logs/).
 """
 
 import argparse
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 import json
 import os
 from pathlib import Path
@@ -58,10 +63,13 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+sys.path.insert(0, str(ROOT / "scripts"))
+
 from collection import CONDITIONS, PLAIN_CONDITIONS  # noqa: E402
+import evaluate_run  # noqa: E402
 from provenance import git_state, guard_results_write  # noqa: E402
 from relearning import INITS  # noqa: E402
-from runs import check_pretrained, is_finished  # noqa: E402
+from runs import check_pretrained, load_run  # noqa: E402
 from training import settings_from_dict  # noqa: E402
 
 PER_RUN = ("condition", "seed", "learner")
@@ -77,6 +85,7 @@ class Job:
     folder: Path = None            # run folder, for crash detection (train and relearn)
     deps: list = field(default_factory=list)
     group: list = field(default_factory=list)  # run folders to check before evaluate_pretrained
+    expect: dict = field(default_factory=dict)  # what an existing output must match (audit of 24 Nov, SF2)
     status: str = "pending"
     seconds: float = None
     log: str = None
@@ -91,6 +100,9 @@ def load_plan(path):
     if "out" not in plan or not plan.get("seeds"):
         raise SystemExit("a plan needs 'out' and a non-empty 'seeds' list")
     settings = plan.setdefault("settings", {})
+    if "purpose" not in settings:  # audit of 24 Nov, MI3: a forgotten purpose would run as "smoke"
+        raise SystemExit("the plan's settings must name a purpose (smoke, tuning, capacity, precondition, "
+                         "pilot or main)")
     if set(settings) & set(PER_RUN):
         raise SystemExit(f"the plan's settings may not set {PER_RUN}: the launcher sets them per run")
     plan.setdefault("conditions", list(CONDITIONS))
@@ -124,14 +136,18 @@ def build_jobs(plan, allow_dirty=False):
         group = {}
         for learner, condition in arms:
             values = {**plan["settings"], "condition": condition, "seed": seed, "learner": learner}
-            settings_from_dict(values)  # raises on any refused setting, before anything runs
+            settings = settings_from_dict(values)  # raises on any refused setting, before anything runs
+            planned_settings = asdict(settings)
+            config, adapter = evaluate_run.build(settings, ev["quick"], ev["skip_adaptation"])  # SF4
+            eval_expect = {"config": asdict(config), "quick_smoke_only": ev["quick"],
+                           "adaptation_run": adapter is not None}
             name = f"{learner}/{condition}/seed{seed}"
             folder = out / "runs" / learner / condition / f"seed{seed}"
             settings_file = out / "job_settings" / f"{learner}_{condition}_seed{seed}.json"
             train = Job(f"train {name}", "train",
                         [py, str(ROOT / "scripts/run_training.py"), "--condition", condition,
                          "--settings", str(settings_file), "--out", str(folder)] + dirty,
-                        folder / "summary.json", folder)
+                        folder / "summary.json", folder, expect={"settings": planned_settings})
             train.settings_file, train.settings_values = settings_file, values
             jobs.append(train)
             group.setdefault(learner, []).append(folder)
@@ -139,29 +155,89 @@ def build_jobs(plan, allow_dirty=False):
                 jobs.append(Job(f"evaluate {name}", "evaluate",
                                 [py, str(ROOT / "scripts/evaluate_run.py"), "--run", str(folder)]
                                 + eval_flags + dirty,
-                                folder / "evaluation_final.json", deps=[train.name]))
+                                folder / "evaluation_final.json", deps=[train.name],
+                                expect={**eval_expect, "which": "final"}))
             if plan["relearning"]["enabled"] and learner == "weighted":
                 re_folder = out / "relearning" / condition / f"seed{seed}"
                 relearn = Job(f"relearn {name}", "relearn",
                               [py, str(ROOT / "scripts/run_relearning.py"), "--run", str(folder),
                                "--out", str(re_folder), "--init", plan["relearning"]["init"]] + dirty,
-                              re_folder / "summary.json", re_folder, deps=[train.name])
+                              re_folder / "summary.json", re_folder, deps=[train.name],
+                              expect={"settings": planned_settings, "init": plan["relearning"]["init"]})
                 jobs.append(relearn)
                 if ev["final"]:
                     jobs.append(Job(f"evaluate relearn {name}", "evaluate",
                                     [py, str(ROOT / "scripts/evaluate_run.py"), "--run", str(re_folder)]
                                     + eval_flags + dirty,
-                                    re_folder / "evaluation_final.json", deps=[relearn.name]))
+                                    re_folder / "evaluation_final.json", deps=[relearn.name],
+                                    expect={**eval_expect, "which": "final"}))
         if ev["pretrained"]:
             for learner, folders in group.items():
+                pre_settings = settings_from_dict({**plan["settings"], "condition": Path(folders[0]).parent.name,
+                                                   "seed": seed, "learner": learner})
+                pre_config, pre_adapter = evaluate_run.build(pre_settings, ev["quick"], ev["skip_adaptation"])
                 target = out / "pretrained" / learner / f"seed{seed}.json"
                 jobs.append(Job(f"evaluate pretrained {learner}/seed{seed}", "evaluate_pretrained",
                                 [py, str(ROOT / "scripts/evaluate_run.py"), "--run", str(folders[0]),
                                  "--which", "pretrained", "--out", str(target)] + eval_flags + dirty,
                                 target, deps=[f"train {learner}/{Path(f).parent.name}/seed{seed}"
                                               for f in folders],
-                                group=folders))
+                                group=folders,
+                                expect={"config": asdict(pre_config), "quick_smoke_only": ev["quick"],
+                                        "adaptation_run": pre_adapter is not None, "which": "pretrained"}))
     return out, jobs
+
+
+def mismatch(job):
+    """Why an existing output does not match the plan, or None (audit of 24 Nov, SF2).
+
+    A resumed launch must not keep a finished run made with other settings
+    (another N, ratio or k), or an evaluation made with another protocol.
+    """
+    try:
+        if job.kind in ("train", "relearn"):
+            settings, _, _ = load_run(job.folder)  # also checks settings.json against summary.json
+            if asdict(settings) != job.expect["settings"]:
+                return f"{job.folder} was run with other settings than this plan's"
+            if job.kind == "relearn":
+                init = json.loads((job.folder / "relearning.json").read_text())["init"]
+                if init != job.expect["init"]:
+                    return f"{job.folder} was re-learned with init {init!r}, not {job.expect['init']!r}"
+        else:
+            result = json.loads(job.done.read_text())
+            recorded = {"config": result["evaluation"]["config"],
+                        "quick_smoke_only": result["evaluation"]["quick_smoke_only"],
+                        "adaptation_run": result["evaluation"]["adaptation_run"], "which": result["run"]["which"]}
+            if recorded != job.expect:
+                return f"{job.done} was evaluated with another protocol than this plan's"
+    except Exception as error:  # noqa: BLE001
+        return f"{job.done} could not be checked against the plan ({type(error).__name__}: {error})"
+    return None
+
+
+class LaunchLock:
+    """One launcher per output folder (audit of 24 Nov, SF3). The lock file is
+    created with O_EXCL and removed when the launch ends; if a launcher was
+    killed without cleaning up, delete OUT/.launch.lock by hand after checking
+    that no launcher is running."""
+
+    def __init__(self, out):
+        self.path = Path(out) / ".launch.lock"
+
+    def __enter__(self):
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            fd = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            raise SystemExit(f"another launch holds {self.path} ({self.path.read_text().strip()}); "
+                             "if none is running, delete the file") from None
+        with os.fdopen(fd, "w") as handle:
+            handle.write(f"pid {os.getpid()}, started {time.strftime('%Y-%m-%dT%H:%M:%S')}\n")
+        return self
+
+    def __exit__(self, *exc):
+        self.path.unlink(missing_ok=True)
+        return False
 
 
 def _environment():
@@ -179,7 +255,10 @@ def run_jobs(out, jobs, workers, retry_incomplete=False, echo=print):
     stamp = time.strftime("%Y%m%d-%H%M%S")
     for job in jobs:
         if job.done.exists():
-            job.status = "done_earlier"
+            reason = mismatch(job) if job.expect else None
+            job.status, job.log = ("failed", reason) if reason else ("done_earlier", job.log)
+            if reason:
+                echo(f"FAILED  {job.name}: {reason}")
         elif job.folder is not None and job.folder.exists() and any(job.folder.iterdir()):
             if retry_incomplete:
                 job.folder.rename(job.folder.with_name(f"{job.folder.name}.incomplete-{stamp}"))
@@ -187,6 +266,22 @@ def run_jobs(out, jobs, workers, retry_incomplete=False, echo=print):
                 job.status = "failed"
                 job.log = f"{job.folder} holds a crashed run; rerun with --retry-incomplete"
     running = {}
+    try:
+        _schedule(jobs, by_name, running, logs, workers, echo)
+    finally:  # an exception or Ctrl-C here must not leave orphaned children (audit of 24 Nov, SF3)
+        for name, (process, handle, _) in running.items():
+            process.terminate()
+            try:
+                process.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                process.kill()
+            handle.close()
+            by_name[name].status = "failed"
+            by_name[name].log = f"{by_name[name].log} (terminated: the launcher stopped)"
+    return jobs
+
+
+def _schedule(jobs, by_name, running, logs, workers, echo):
     while True:
         for job in jobs:  # dependants of failures are skipped
             if job.status == "pending" and any(by_name[d].status in ("failed", "skipped") for d in job.deps):
@@ -227,7 +322,6 @@ def run_jobs(out, jobs, workers, retry_incomplete=False, echo=print):
             job.status = "done" if process.returncode == 0 and job.done.exists() else "failed"
             echo(f"{'done   ' if job.status == 'done' else 'FAILED '} {name} ({job.seconds} s)")
             del running[name]
-    return jobs
 
 
 def main(argv=None):
@@ -251,18 +345,22 @@ def main(argv=None):
         return 0
     started = time.strftime("%Y-%m-%dT%H:%M:%S")
     state = git_state(ROOT)
-    run_jobs(out, jobs, args.workers, args.retry_incomplete)
-    report = check_pretrained(out) if (out / "runs").exists() else None
-    manifest_file = out / "launch_manifest.json"
-    history = json.loads(manifest_file.read_text())["launches"] if manifest_file.exists() else []
-    history.append({
-        "started": started, "finished": time.strftime("%Y-%m-%dT%H:%M:%S"), **state,
-        "workers": args.workers, "plan": plan,
-        "jobs": [{"name": j.name, "kind": j.kind, "status": j.status, "seconds": j.seconds,
-                  "log": j.log, "command": shlex.join(j.command)} for j in jobs],
-        "pretrained_check": report,
-    })
-    manifest_file.write_text(json.dumps({"launches": history}, indent=2) + "\n")
+    report = None
+    with LaunchLock(out):
+        try:
+            run_jobs(out, jobs, args.workers, args.retry_incomplete)
+            report = check_pretrained(out) if (out / "runs").exists() else None
+        finally:  # the manifest is written however the launch ends (audit of 24 Nov, SF3)
+            manifest_file = out / "launch_manifest.json"
+            history = json.loads(manifest_file.read_text())["launches"] if manifest_file.exists() else []
+            history.append({
+                "started": started, "finished": time.strftime("%Y-%m-%dT%H:%M:%S"), **state,
+                "workers": args.workers, "plan": plan,
+                "jobs": [{"name": j.name, "kind": j.kind, "status": j.status, "seconds": j.seconds,
+                          "log": j.log, "command": shlex.join(j.command)} for j in jobs],
+                "pretrained_check": report,
+            })
+            manifest_file.write_text(json.dumps({"launches": history}, indent=2) + "\n")
     counts = {s: sum(j.status == s for j in jobs) for s in ("done", "done_earlier", "failed", "skipped")}
     print(f"jobs: {counts}; pretrained check: "
           f"{'passed' if report and report['passed'] else 'FAILED' if report else 'no runs'}")

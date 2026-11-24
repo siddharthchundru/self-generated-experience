@@ -24,6 +24,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import numpy as np
 import torch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -135,12 +136,18 @@ class TestEvaluateAndCheck(unittest.TestCase):
         report = runs.check_pretrained(folders=[self.task, other])
         self.assertFalse(report["passed"])
         self.assertTrue(any("differ in warm-up settings" in p for p in report["problems"]))
-        moved = self.copy_run(self.frontier, "other_commit")
-        record = json.loads((moved / "run_record.json").read_text())
+        # The commit is only a label; the code is compared by source hashes (MI1).
+        relabelled = self.copy_run(self.frontier, "other_commit")
+        record = json.loads((relabelled / "run_record.json").read_text())
         record["git_commit"] = "f" * 40
-        (moved / "run_record.json").write_text(json.dumps(record))
-        report = runs.check_pretrained(folders=[self.task, moved])
-        self.assertTrue(any("different commits" in p for p in report["problems"]))
+        (relabelled / "run_record.json").write_text(json.dumps(record))
+        self.assertTrue(runs.check_pretrained(folders=[self.task, relabelled])["passed"])
+        changed = self.copy_run(self.frontier, "other_code")
+        record = json.loads((changed / "run_record.json").read_text())
+        record["source_sha256"]["src/collection.py"] = "0" * 64
+        (changed / "run_record.json").write_text(json.dumps(record))
+        report = runs.check_pretrained(folders=[self.task, changed])
+        self.assertTrue(any("different code" in p for p in report["problems"]))
 
     def test_unfinished_run_is_listed(self):
         crashed = self.tmp / "crashed"
@@ -149,6 +156,109 @@ class TestEvaluateAndCheck(unittest.TestCase):
         report = runs.check_pretrained(folders=[self.task, crashed])
         self.assertEqual(report["unfinished"], [str(crashed)])
         self.assertTrue(report["passed"])
+
+    def test_edited_settings_are_refused(self):  # SF1
+        import evaluate_run
+        edited = self.copy_run(self.task, "edited")
+        settings = json.loads((edited / "settings.json").read_text())
+        for change in ({"learning_rate": 3e-4}, {"learner": "plain"}, {"adaptation_steps": 120},
+                       {"updates_per_env_step": 2.0}):
+            (edited / "settings.json").write_text(json.dumps({**settings, **change}))
+            with self.assertRaisesRegex(ValueError, "settings.json differs", msg=change):
+                evaluate_run.main(["--run", str(edited), "--quick", "--out", str(self.tmp / "never.json")])
+        self.assertFalse((self.tmp / "never.json").exists())
+
+    def test_evaluation_follows_another_learning_rate(self):  # M7
+        import evaluate_run
+        run = train(self.tmp / "lr3", learning_rate=3e-4)
+        out = self.tmp / "eval_lr3.json"
+        evaluate_run.main(["--run", str(run), "--quick", "--out", str(out)])
+        result = json.loads(out.read_text())
+        self.assertEqual(result["evaluation"]["config"]["adaptation_learning_rate"], 3e-4)
+        self.assertEqual(result["report"]["adaptation_runs"]["P1"]["learner_settings"]["learning_rate"], 3e-4)
+        self.assertEqual(result["torch_threads"]["intra_op"], torch.get_num_threads())  # MI7: recorded
+
+    def test_concurrent_evaluation_never_replaces_a_file(self):  # SF3
+        import evaluate_run
+        out = self.tmp / "race.json"
+        original = evaluate_run.evaluate_policy
+
+        def racing(*args, **kwargs):
+            out.write_text("the other evaluation")
+            return original(*args, **kwargs)
+
+        with mock.patch.object(evaluate_run, "evaluate_policy", racing):
+            with self.assertRaisesRegex(SystemExit, "meanwhile"):
+                evaluate_run.main(["--run", str(self.task), "--quick", "--out", str(out)])
+        self.assertEqual(out.read_text(), "the other evaluation")
+        self.assertEqual(list(self.tmp.glob("race.json.*partial")), [])
+
+    def test_unreadable_files_are_reported_not_raised(self):  # SF3
+        broken = self.copy_run(self.frontier, "broken")
+        (broken / "pretrained.pt").write_bytes(b"not a checkpoint")
+        truncated = self.copy_run(self.frontier, "truncated")
+        (truncated / "summary.json").write_text('{"settings": ')
+        report = runs.check_pretrained(folders=[self.task, broken, truncated])
+        self.assertFalse(report["passed"])
+        self.assertEqual(sum("could not be checked" in p for p in report["problems"]), 2)
+
+    def test_load_buffer_refuses_a_tampered_file(self):  # M3
+        tampered = self.copy_run(self.task, "tampered_buffer")
+        with np.load(tampered / "final_buffer.npz") as data:
+            arrays = {k: data[k].copy() for k in data.files}
+        arrays["goals"][0, 0] += 0.5
+        np.savez_compressed(tampered / "final_buffer.npz", **arrays)
+        with self.assertRaisesRegex(ValueError, "does not match the digest"):
+            runs.load_buffer(tampered)
+
+    def test_relearners_are_checked(self):  # M12, MI2
+        import run_relearning
+        same = self.tmp / "re_same"
+        run_relearning.main(["--run", str(self.task), "--out", str(same), "--init", "same"])
+        fresh_a, fresh_b = self.tmp / "re_fresh_a", self.tmp / "re_fresh_b"
+        run_relearning.main(["--run", str(self.task), "--out", str(fresh_a)])
+        run_relearning.main(["--run", str(self.frontier), "--out", str(fresh_b)])
+        self.assertTrue(runs.check_pretrained(folders=[self.task, same, fresh_a, fresh_b])["passed"])
+        summary = json.loads((same / "summary.json").read_text())
+        self.assertEqual(summary["warmup_rule_used"], "fixed")  # MI6
+        self.assertTrue(summary["source"]["same_code"])  # MI5
+        record = json.loads((fresh_a / "run_record.json").read_text())
+        self.assertEqual(record["torch_threads"]["intra_op"], torch.get_num_threads())
+        forged = self.copy_run(same, "re_same_forged")
+        summary["pretrained_digest"] = "0" * 64
+        (forged / "summary.json").write_text(json.dumps(summary))
+        report = runs.check_pretrained(folders=[forged], verify_files=False)
+        self.assertTrue(any("did not reproduce" in p for p in report["problems"]))
+        forged_fresh = self.copy_run(fresh_b, "re_fresh_forged")
+        fresh_summary = json.loads((forged_fresh / "summary.json").read_text())
+        fresh_summary["pretrained_digest"] = "1" * 64
+        (forged_fresh / "summary.json").write_text(json.dumps(fresh_summary))
+        report = runs.check_pretrained(folders=[fresh_a, forged_fresh], verify_files=False)
+        self.assertTrue(any("re-learners with init 'fresh'" in p for p in report["problems"]))
+
+    def test_relearning_records_a_code_change(self):  # MI5
+        import run_relearning
+        source = self.copy_run(self.task, "other_code_source")
+        record = json.loads((source / "run_record.json").read_text())
+        record["source_sha256"]["src/gcsl.py"] = "0" * 64
+        (source / "run_record.json").write_text(json.dumps(record))
+        out = self.tmp / "re_other_code"
+        run_relearning.main(["--run", str(source), "--out", str(out)])  # smoke: a warning, not a refusal
+        self.assertFalse(json.loads((out / "relearning.json").read_text())["same_code_as_source"])
+
+    def test_launcher_precheck_blocks_the_pretrained_evaluation(self):  # M14, M15
+        import launch
+        forged = self.copy_run(self.frontier, "forged_for_launcher")
+        summary = json.loads((forged / "summary.json").read_text())
+        summary["pretrained_digest"] = "0" * 64
+        (forged / "summary.json").write_text(json.dumps(summary))
+        target = self.tmp / "pre_eval.json"
+        job = launch.Job("evaluate pretrained", "evaluate_pretrained",
+                         [sys.executable, "-c", f"open(r'{target}', 'w')"], target,
+                         group=[self.task, forged])  # the forged run is second in the group
+        launch.run_jobs(self.tmp / "launch_out", [job], workers=1, echo=lambda *_: None)
+        self.assertEqual(job.status, "failed")
+        self.assertFalse(target.exists())
 
 
 class TestLauncher(unittest.TestCase):
@@ -159,7 +269,7 @@ class TestLauncher(unittest.TestCase):
         shutil.rmtree(self.tmp)
 
     def plan(self, **overrides):
-        plan = {"out": str(self.tmp / "out"), "settings": dict(TINY), "seeds": [0],
+        plan = {"out": str(self.tmp / "out"), "settings": {**TINY, "purpose": "smoke"}, "seeds": [0],
                 "conditions": ["demonstrations_only", TASK_DIRECTED], "evaluate": {"quick": True}}
         plan.update(overrides)
         path = self.tmp / "plan.json"
@@ -168,7 +278,8 @@ class TestLauncher(unittest.TestCase):
 
     def test_plan_refusals(self):
         import launch
-        for bad in ({"settings": {"seed": 3}}, {"plain_conditions": ["expert_top_up"]}, {"seeds": []},
+        for bad in ({"settings": {"purpose": "smoke", "seed": 3}}, {"settings": {}},  # MI3: purpose required
+                    {"plain_conditions": ["expert_top_up"]}, {"seeds": []},
                     {"conditions": ["nothing"]}, {"seeds": [1, 1]}, {"relearning": {"init": "warm"}},
                     {"typo": 1}):
             with self.assertRaises(SystemExit, msg=bad):
@@ -179,6 +290,11 @@ class TestLauncher(unittest.TestCase):
         plan = launch.load_plan(self.plan(settings={"purpose": "pilot"}))  # k placeholder
         with self.assertRaisesRegex(ValueError, "placeholder"):
             launch.build_jobs(plan)
+        for purpose in ("pilot", "precondition"):  # SF4: quick evaluation refused before anything runs
+            settings = {"purpose": purpose, "adaptation_steps": 24_960} if purpose == "pilot" else {"purpose": purpose}
+            plan = launch.load_plan(self.plan(settings=settings, evaluate={"quick": True}))
+            with self.assertRaisesRegex(SystemExit, "smoke runs only"):
+                launch.build_jobs(plan)
 
     def test_job_graph(self):
         import launch
@@ -234,6 +350,54 @@ class TestLauncher(unittest.TestCase):
         self.assertEqual(launch.main([str(plan), "--workers", "3"]), 1)
         self.assertEqual(launch.main([str(plan), "--workers", "3", "--retry-incomplete"]), 0)
         self.assertEqual(len(list(run.parent.glob("seed0.incomplete-*"))), 1)
+        # One thread per process, in training and re-learning runs (M18, M19).
+        for folder in (run, out / "relearning" / TASK_DIRECTED / "seed0"):
+            threads = json.loads((folder / "run_record.json").read_text())["torch_threads"]
+            self.assertEqual(threads, {"intra_op": 1, "inter_op": 1}, folder)
+        # Resuming with another budget, ratio or k fails instead of mixing runs (SF2).
+        changed = self.plan(relearning={"enabled": True}, conditions=[TASK_DIRECTED],
+                            settings={**TINY, "purpose": "smoke", "updates_per_env_step": 2.0})
+        self.assertEqual(launch.main([str(changed), "--workers", "3"]), 1)
+        jobs = json.loads((out / "launch_manifest.json").read_text())["launches"][-1]["jobs"]
+        train_job = next(j for j in jobs if j["name"] == f"train weighted/{TASK_DIRECTED}/seed0")
+        self.assertEqual(train_job["status"], "failed")
+        self.assertIn("other settings", train_job["log"])
+        quick_off = self.plan(relearning={"enabled": True}, conditions=[TASK_DIRECTED],
+                              evaluate={"quick": True, "skip_adaptation": True})
+        self.assertEqual(launch.main([str(quick_off), "--workers", "3"]), 1)
+        jobs = json.loads((out / "launch_manifest.json").read_text())["launches"][-1]["jobs"]
+        eval_job = next(j for j in jobs if j["name"] == f"evaluate weighted/{TASK_DIRECTED}/seed0")
+        self.assertIn("another protocol", eval_job["log"])
+
+    def test_one_thread_environment(self):  # M18
+        import launch
+        env = launch._environment()
+        self.assertEqual({env[k] for k in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS")}, {"1"})
+
+    def test_a_stopped_launcher_terminates_its_jobs(self):  # SF3
+        import launch
+        job = launch.Job("sleep", "train", [sys.executable, "-c", "import time; time.sleep(60)"],
+                         self.tmp / "never")
+
+        def echo(line):
+            if line.startswith("started"):
+                raise KeyboardInterrupt
+
+        out = self.tmp / "stopped"
+        with self.assertRaises(KeyboardInterrupt):
+            launch.run_jobs(out, [job], workers=1, echo=echo)
+        self.assertEqual(job.status, "failed")
+        self.assertIn("terminated", job.log)
+
+    def test_one_launch_per_output(self):  # SF3
+        import launch
+        out = self.tmp / "locked"
+        with launch.LaunchLock(out):
+            with self.assertRaisesRegex(SystemExit, "another launch"):
+                with launch.LaunchLock(out):
+                    pass
+        with launch.LaunchLock(out):  # released
+            pass
 
     def test_refuses_results_from_a_dirty_tree(self):
         import launch
