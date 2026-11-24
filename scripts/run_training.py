@@ -12,8 +12,10 @@ stops after warm-up, which is what the precondition check needs.
 Writes into OUT: settings.json, run_record.json (commit, dirty flag, source
 hashes, machine, package versions, taken at start), episodes.jsonl (one line
 per practice episode, written as it finishes), summary.json (budget audit,
-data diversity, exposure totals, wall-clock) and pretrained.pt / final.pt (the
-policy network's weights). Writing into results/ needs a clean, committed
+data diversity, exposure totals, wall-clock), pretrained.pt / final.pt (the
+policy network's weights) and final_buffer.npz (every trajectory the run
+trained on, D0 included, as the learner stores them; the re-learning control
+trains on it, and its digest is in summary.json). Writing into results/ needs a clean, committed
 working tree; anything else (a scratch folder) is always allowed and is not a
 filed result. --allow-dirty marks an exploratory run.
 
@@ -28,11 +30,13 @@ import json
 from pathlib import Path
 import sys
 
+import numpy as np
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from gcsl import pin_single_thread  # noqa: E402
-from provenance import guard_results_write, run_record  # noqa: E402
+from provenance import claim_output_folder, guard_results_write, run_record, write_text_atomic  # noqa: E402
 from training import CONDITIONS, TrainingSettings, run_training, settings_from_dict  # noqa: E402
 
 
@@ -72,9 +76,7 @@ def main(argv=None):
     record = run_record(ROOT)  # taken once, at start, so it describes the code that ran
     guard_results_write(ROOT, args.out, args.allow_dirty)
     out = args.out
-    out.mkdir(parents=True, exist_ok=True)
-    if any(out.iterdir()):  # never overwrite a run, finished or crashed (audit of 4 Nov, MI6)
-        raise SystemExit(f"{out} is not empty; choose another folder")
+    claim_output_folder(out)  # never overwrite a run, finished or crashed (audits of 4 Nov MI6, 24 Nov SF3)
     record["allow_dirty"] = args.allow_dirty
     record["torch_threads"] = {"intra_op": torch.get_num_threads(), "inter_op": torch.get_num_interop_threads()}
     (out / "run_record.json").write_text(json.dumps(record, indent=2))
@@ -87,7 +89,8 @@ def main(argv=None):
         result = run_training(settings, on_episode=write)
     torch.save(result["pretrained_state"], out / "pretrained.pt")
     torch.save(result["final_state"], out / "final.pt")
-    (out / "summary.json").write_text(json.dumps(result["summary"], indent=2))
+    np.savez_compressed(out / "final_buffer.npz", **result["final_buffer"])
+    write_text_atomic(out / "summary.json", json.dumps(result["summary"], indent=2))  # written last
     budget = result["summary"]["budget"]
     print(f"{settings.condition} seed {settings.seed} ({settings.learner}, {settings.maze}): "
           f"{budget['practice_environment_steps']} environment steps, "

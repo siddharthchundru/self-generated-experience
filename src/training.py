@@ -3,7 +3,8 @@
 What this file does, in one sentence: `run_training(settings)` builds D0,
 warms the learner up on it, resets Adam, runs one condition's practice for a
 whole-episode budget N, logs every environment step and gradient step for the
-budget audit, and returns the pretrained and final policies with the logs.
+budget audit, and returns the pretrained and final policies, the final buffer
+(for the re-learning control, `relearning.py`) and the logs.
 
 Why it matters: every condition goes through this one function, so they share
 everything except the goal rule (spec sections 5 to 7):
@@ -268,9 +269,11 @@ class _Exposure:
                 "held_out_goal_share": float(a[:, 3].mean()), "held_out_weight_share": float(a[:, 4].mean())}
 
 
-def _step(learner, buffer, rng, exposure):
+def _step(learner, buffer, rng, exposure, check_fresh=False):
     stats = learner.update(buffer, rng)
     exposure.add(stats, learner.last_batch)
+    if check_fresh and learner.gradient_steps == 1:
+        assert_fresh_adam(learner.optimizer)
 
 
 # --- Warm-up -------------------------------------------------------------------------
@@ -282,15 +285,17 @@ def validation_loss(policy, batch):
                                    torch.from_numpy(batch["weight"]).float()))
 
 
-def warm_up(settings, d0_buffer):
+def warm_up(settings, d0_buffer, init_tag=TAG_INIT, stream_tag=TAG_WARMUP):
     """Train a seed-initialised policy on D0 alone. Returns (policy, log).
 
     The warm-up learner (and its Adam) is discarded afterwards: practice starts
-    a new one (spec v0.12).
+    a new one (spec v0.12). `init_tag` and `stream_tag` select the initial
+    weights and the batch stream; the re-learning control passes its own tags
+    for a fresh learner (`relearning.py`).
     """
-    policy = GCSLPolicy(int(np.random.SeedSequence([settings.seed, TAG_INIT]).generate_state(1)[0]))
+    policy = GCSLPolicy(int(np.random.SeedSequence([settings.seed, init_tag]).generate_state(1)[0]))
     learner = GCSLLearner(policy, settings.gamma, settings.learning_rate, settings.batch_size)
-    rng = np.random.default_rng(np.random.SeedSequence([settings.seed, TAG_WARMUP]))
+    rng = np.random.default_rng(np.random.SeedSequence([settings.seed, stream_tag]))
     exposure = _Exposure(settings.maze)
     log = {"rule": settings.warmup_rule, "checks": []}
     if settings.warmup_rule == "fixed":
@@ -318,6 +323,25 @@ def warm_up(settings, d0_buffer):
     log.update({"updates": learner.gradient_steps, "optimizer_steps": _adam_steps(learner.optimizer),
                 **{f"batch_{k}": v for k, v in exposure.summary().items() if k != "updates"}})
     return policy, log
+
+
+def assert_fresh_adam(optimizer):
+    """After an optimiser's first step, check it started from an empty state.
+
+    From zero, Adam's first step leaves each running average at exactly
+    (1 - beta1) x g and (1 - beta2) x g^2, where g is the gradient that step
+    used (still on the parameter). A state carried over from warm-up would not
+    (audit of 24 Nov, SF5, M5; the 4 Nov M2 gap, for the training runner too).
+    """
+    for group in optimizer.param_groups:
+        beta1, beta2 = group["betas"]
+        for p in group["params"]:
+            state = optimizer.state[p]
+            if int(state["step"]) != 1 or p.grad is None:
+                raise AssertionError("assert_fresh_adam must run right after the first step")
+            if not (torch.allclose(state["exp_avg"], (1 - beta1) * p.grad, rtol=1e-5, atol=1e-12)
+                    and torch.allclose(state["exp_avg_sq"], (1 - beta2) * p.grad ** 2, rtol=1e-5, atol=1e-18)):
+                raise AssertionError("Adam's state was not empty when the updates after warm-up began")
 
 
 def _adam_steps(optimizer):
@@ -390,12 +414,12 @@ def _run(settings, on_episode, started, counted):
             row = {"episode": index}
             if collector is None:  # demonstrations only: the same updates, on D0 alone
                 for _ in range(per_episode):
-                    _step(learner, buffer, rng, exposure)
+                    _step(learner, buffer, rng, exposure, True)
             else:
                 due = _interleaved_due(s.updates_per_env_step) if s.schedule == "interleaved" else None
                 after_step = None
                 if due is not None:
-                    after_step = lambda step: [_step(learner, buffer, rng, exposure) for _ in range(due[step])]
+                    after_step = lambda step: [_step(learner, buffer, rng, exposure, True) for _ in range(due[step])]
                 trajectory, record = collector.run_episode(index, after_step)
                 env_steps += len(trajectory["actions"])
                 buffer.add(trajectory, s.condition)
@@ -410,7 +434,7 @@ def _run(settings, on_episode, started, counted):
                 collected_goal_cells_held_out += int(record["goal_in_held_out"])
                 if due is None:
                     for _ in range(per_episode):
-                        _step(learner, buffer, rng, exposure)
+                        _step(learner, buffer, rng, exposure, True)
             row.update({"environment_steps": env_steps, "gradient_steps": learner.gradient_steps,
                         "buffer_trajectories": len(buffer), "learning_rate": learner.current_learning_rate(),
                         "batches": exposure.summary()})
@@ -428,10 +452,12 @@ def _run(settings, on_episode, started, counted):
         raise AssertionError("frontier novelty's achieved positions differ from its buffer's")  # audit SF4
     budget = _budget_audit(s, env_steps, learner, warmup_log, counted[0], len(buffer), len(demonstrations))
     summary = {
+        "kind": "training",
         "settings": asdict(s), "gamma": s.gamma,
         "demonstrations": len(demonstrations),
         "warmup_key": s.warmup_key(),
         "pretrained_digest": pretrained_digest, "final_digest": policy.parameter_digest(),
+        "final_buffer_digest": buffer.digest(),
         "warmup": warmup_log, "budget": budget,
         "commanded_held_out_goals": collected_goal_cells_held_out,
         "data_diversity": diversity.summary(),
@@ -440,7 +466,8 @@ def _run(settings, on_episode, started, counted):
         "wall_clock_seconds": {"warmup": warmup_seconds, "total": time.perf_counter() - started},
     }
     return {"summary": summary, "episodes": log, "pretrained_state": pretrained_state,
-            "final_state": {k: v.clone() for k, v in policy.network.state_dict().items()}}
+            "final_state": {k: v.clone() for k, v in policy.network.state_dict().items()},
+            "final_buffer": buffer.to_arrays()}
 
 
 def _interleaved_due(ratio):
