@@ -1,0 +1,9 @@
+{
+  "note": "Precondition check (spec section 7): warm-up only (budget 0) for both learners on M1, 6 pilot seeds, pretrained policy evaluated without adaptation. Set learning_rate to the value chosen by tuning before launching. Then: python scripts/precondition_check.py results/stage2/precondition --report results/stage2/precondition/check.json",
+  "out": "results/stage2/precondition",
+  "settings": {"purpose": "precondition", "maze": "M1", "budget_steps": 0, "learning_rate": 0.001},
+  "seeds": [0, 1, 2, 3, 4, 5],
+  "conditions": ["task_directed_practice"],
+  "plain_conditions": ["task_directed_practice"],
+  "evaluate": {"final": false, "pretrained": true, "skip_adaptation": true}
+}
