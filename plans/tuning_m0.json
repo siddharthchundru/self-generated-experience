@@ -1,0 +1,10 @@
+{
+  "note": "Tuning on M0 (spec section 7): weighted learner, task-directed practice and frontier novelty, grid learning rate {0.0003, 0.001} x updates per environment step {0.5, 1, 2}, 3 seeds per cell (C9), tuning budget 99,960 steps (A4), 6 trials per condition. Checkpoints after 5 and 25 practice episodes for the early-drop check (spec v0.12). Then: python scripts/select_tuning.py results/stage2/tuning --report results/stage2/tuning/selection.json",
+  "out": "results/stage2/tuning",
+  "settings": {"purpose": "tuning", "maze": "M0", "budget_steps": 99960},
+  "seeds": [0, 1, 2],
+  "conditions": ["task_directed_practice", "frontier_novelty"],
+  "grid": {"learning_rate": [0.0003, 0.001], "updates_per_env_step": [0.5, 1, 2]},
+  "checkpoints": [5, 25],
+  "evaluate": {"final": true, "pretrained": true, "skip_adaptation": true}
+}

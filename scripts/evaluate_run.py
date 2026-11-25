@@ -15,6 +15,8 @@ minority-route success rate, per-route quality, A_0 and best-of-m under the P1
 block, and A_k after the common adaptation procedure under P1 and P1-own.
 
 Options:
+- --which checkpoint_ep<N> evaluates the weights a run kept after N practice
+  episodes (run_training.py --checkpoints), for the early-drop check in tuning.
 - --which pretrained evaluates the policy after warm-up. Every condition in a
   seed shares it, so evaluate it from one run per seed and learner (the
   launcher does).
@@ -44,7 +46,7 @@ from eval.suite import evaluate_policy  # noqa: E402
 from episode import EPISODE_STEPS  # noqa: E402
 from gcsl import pin_single_thread  # noqa: E402
 from provenance import guard_results_write, run_record  # noqa: E402
-from runs import WEIGHTS, load_policy, load_run  # noqa: E402
+from runs import load_policy, load_run, recorded_digest  # noqa: E402
 from training import K_PLACEHOLDER, adapter_for, evaluation_config_for  # noqa: E402
 
 QUICK = {"sampled_rollouts": 10, "minimum_successes": 2, "greedy_rollouts": 2, "bootstrap_resamples": 200,
@@ -67,7 +69,7 @@ def build(settings, quick=False, skip_adaptation=False):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--run", type=Path, required=True)
-    parser.add_argument("--which", choices=tuple(WEIGHTS), default="final")
+    parser.add_argument("--which", default="final", help="final, pretrained or checkpoint_ep<N>")
     parser.add_argument("--out", type=Path)
     parser.add_argument("--skip-adaptation", action="store_true")
     parser.add_argument("--quick", action="store_true")
@@ -81,7 +83,7 @@ def main(argv=None):
     config, adapter = build(settings, args.quick, args.skip_adaptation)
     policy = load_policy(args.run, args.which)
     evaluated_digest = policy.parameter_digest()  # of the policy handed to the suite (audit of 24 Nov, M8)
-    if evaluated_digest != summary[f"{args.which}_digest"]:
+    if evaluated_digest != recorded_digest(summary, args.which):
         raise AssertionError("the policy about to be evaluated is not the run's")
     record = run_record(ROOT)
     guard_results_write(ROOT, out, args.allow_dirty)
