@@ -353,24 +353,32 @@ def _adam_steps(optimizer):
 
 # --- Practice ------------------------------------------------------------------------
 
-def run_training(settings, on_episode=None):
+def run_training(settings, on_episode=None, checkpoint_episodes=()):
     """One run: D0, warm-up, Adam reset, practice for N. See the module docstring.
 
     `on_episode(row)` receives each practice log row as it is produced (the
-    script writes them to disk). Returns a dict with the pretrained and final
-    policies' weights, the summary and the episode log.
+    script writes them to disk). `checkpoint_episodes` lists practice-episode
+    counts after which the policy's weights are kept as well, for the early-drop
+    check during tuning (spec v0.12 fallback); keeping them reads the weights and
+    touches no random stream, so the run is otherwise unchanged. Returns a dict
+    with the pretrained, checkpoint and final policies' weights, the summary and
+    the episode log.
     """
+    checkpoints = sorted({int(n) for n in checkpoint_episodes})
+    if any(n < 1 or n > settings.practice_episodes for n in checkpoints):
+        raise ValueError("checkpoints must lie between 1 and the run's practice episodes")
     started = time.perf_counter()
     counted = [0]
     handle = register_optimizer_step_post_hook(lambda *_: counted.__setitem__(0, counted[0] + 1))
     try:
-        return _run(settings, on_episode, started, counted)
+        return _run(settings, on_episode, started, counted, checkpoints)
     finally:
         handle.remove()
 
 
-def _run(settings, on_episode, started, counted):
+def _run(settings, on_episode, started, counted, checkpoints=()):
     s = settings
+    kept = {}
     demonstrations = build_demonstrations(s.maze, s.demos_per_pair, s.seed)
     buffer = _buffer_of(demonstrations, "D0")
     diversity = DataDiversityLog(s.maze)
@@ -442,6 +450,9 @@ def _run(settings, on_episode, started, counted):
                 raise AssertionError(f"episode {index} took {row['batches']['updates']} updates, "
                                      f"not {per_episode}")
             log.append(row)
+            if index + 1 in checkpoints:
+                kept[index + 1] = ({k: v.clone() for k, v in policy.network.state_dict().items()},
+                                   policy.parameter_digest())
             if on_episode is not None:
                 on_episode(row)
     finally:
@@ -465,9 +476,12 @@ def _run(settings, on_episode, started, counted):
                               for r in forks},
         "wall_clock_seconds": {"warmup": warmup_seconds, "total": time.perf_counter() - started},
     }
+    if kept:
+        summary["checkpoint_digests"] = {str(n): digest for n, (_, digest) in kept.items()}
     return {"summary": summary, "episodes": log, "pretrained_state": pretrained_state,
             "final_state": {k: v.clone() for k, v in policy.network.state_dict().items()},
-            "final_buffer": buffer.to_arrays()}
+            "final_buffer": buffer.to_arrays(),
+            "checkpoint_states": {n: state for n, (state, _) in kept.items()}}
 
 
 def _interleaved_due(ratio):

@@ -36,6 +36,7 @@ from collections import defaultdict
 from dataclasses import asdict
 import json
 from pathlib import Path
+import re
 
 import numpy as np
 import torch
@@ -44,6 +45,8 @@ from gcsl import GCSLPolicy, TrajectoryBuffer
 from training import settings_from_dict
 
 WEIGHTS = {"pretrained": "pretrained.pt", "final": "final.pt"}
+#: Settings a tuning grid varies (spec section 7): runs that differ in them are different cells, not a mismatch.
+TUNING_GRID = ("learning_rate", "updates_per_env_step")
 
 
 def is_finished(folder):
@@ -72,18 +75,35 @@ def code_hashes(record):
             if path.startswith("src/") or path in ("scripts/run_training.py", "scripts/run_relearning.py")}
 
 
-def load_policy(folder, which="final"):
-    """The policy saved as `which` ("pretrained" or "final"), checked against the
-    fingerprint recorded in summary.json."""
+CHECKPOINT = re.compile(r"^checkpoint_ep(\d+)$")
+
+
+def recorded_digest(summary, which):
+    """The fingerprint summary.json records for `which`: "pretrained", "final" or
+    "checkpoint_ep<N>" (a weights snapshot kept after N practice episodes)."""
+    match = CHECKPOINT.match(which)
+    if match:
+        digest = (summary.get("checkpoint_digests") or {}).get(match.group(1))
+        if digest is None:
+            raise ValueError(f"the run kept no {which}")
+        return digest
     if which not in WEIGHTS:
-        raise ValueError(f"which must be one of {tuple(WEIGHTS)}")
+        raise ValueError(f"which must be one of {tuple(WEIGHTS)} or checkpoint_ep<N>")
+    return summary[f"{which}_digest"]
+
+
+def load_policy(folder, which="final"):
+    """The policy saved as `which` ("pretrained", "final" or "checkpoint_ep<N>"),
+    checked against the fingerprint recorded in summary.json."""
     folder = Path(folder)
     _, summary, _ = load_run(folder)
+    expected = recorded_digest(summary, which)
+    path = folder / (WEIGHTS[which] if which in WEIGHTS else f"{which}.pt")
     policy = GCSLPolicy(0, name=f"{folder.name}:{which}")
-    state = torch.load(folder / WEIGHTS[which], map_location="cpu", weights_only=True)
+    state = torch.load(path, map_location="cpu", weights_only=True)
     policy.network.load_state_dict(state)
-    if policy.parameter_digest() != summary[f"{which}_digest"]:
-        raise ValueError(f"{folder / WEIGHTS[which]} does not match the fingerprint in summary.json")
+    if policy.parameter_digest() != expected:
+        raise ValueError(f"{path} does not match the fingerprint in summary.json")
     return policy
 
 
@@ -134,7 +154,9 @@ def check_pretrained(root=None, verify_files=True, folders=None):
                  "warmup_key": json.dumps(settings.warmup_key(), sort_keys=True),
                  "pretrained_digest": summary["pretrained_digest"],
                  "commit": record.get("git_commit"), "dirty": record.get("working_tree_dirty"),
-                 "code": json.dumps(code_hashes(record), sort_keys=True), "init": summary.get("init")}
+                 "code": json.dumps(code_hashes(record), sort_keys=True), "init": summary.get("init"),
+                 # Tuning varies these on purpose: each grid cell is its own batch.
+                 "cell": tuple(getattr(settings, n) for n in TUNING_GRID) if settings.purpose == "tuning" else ()}
         if entry["kind"] == "training" and summary.get("warmup_key") != settings.warmup_key():
             problems.append(f"{folder}: summary's warm-up key differs from its settings")
         if summary["budget"].get("passed") is not True:
@@ -151,11 +173,11 @@ def check_pretrained(root=None, verify_files=True, folders=None):
     by_key, by_seed, by_seed_any_purpose, relearners = (defaultdict(list) for _ in range(4))
     for r in training:
         by_key[r["warmup_key"]].append(r)
-        by_seed[(r["seed"], r["maze"], r["learner"], r["purpose"])].append(r)
+        by_seed[(r["seed"], r["maze"], r["learner"], r["purpose"], r["cell"])].append(r)
         by_seed_any_purpose[(r["seed"], r["maze"], r["learner"])].append(r)
     for r in runs:
         if r["kind"] == "relearning":  # audit of 24 Nov, MI2: re-learners in a seed are paired too
-            relearners[(r["seed"], r["maze"], r["learner"], r["purpose"], r["init"])].append(r)
+            relearners[(r["seed"], r["maze"], r["learner"], r["purpose"], r["cell"], r["init"])].append(r)
     groups = []
     for key, members in by_key.items():
         digests = sorted({m["pretrained_digest"] for m in members})
@@ -164,8 +186,8 @@ def check_pretrained(root=None, verify_files=True, folders=None):
         if len(digests) != 1:
             problems.append(f"runs with warm-up key {key} recorded {len(digests)} different pretrained "
                             f"policies: {[m['folder'] for m in members]}")
-    for (seed, maze, learner, purpose), members in by_seed.items():
-        label = f"seed {seed}, {maze}, {learner} learner, {purpose}"
+    for (seed, maze, learner, purpose, cell), members in by_seed.items():
+        label = f"seed {seed}, {maze}, {learner} learner, {purpose}" + (f", tuning cell {cell}" if cell else "")
         if len({m["warmup_key"] for m in members}) != 1:
             problems.append(f"{label}: runs differ in warm-up settings, so they did not start from the same "
                             f"policy: {[m['folder'] for m in members]}")
@@ -180,7 +202,7 @@ def check_pretrained(root=None, verify_files=True, folders=None):
             warnings.append(f"seed {seed}, {maze}, {learner} learner: runs of different purposes "
                             f"({sorted({m['purpose'] for m in members})}) started from different policies; "
                             "they are not paired with each other")  # audit of 24 Nov, MI3
-    for (seed, maze, learner, purpose, init), members in relearners.items():
+    for (seed, maze, learner, purpose, _, init), members in relearners.items():
         if len({m["pretrained_digest"] for m in members}) != 1:
             problems.append(f"seed {seed}, {maze}, {learner} learner, {purpose}: re-learners with init "
                             f"'{init}' started from different pretrained policies: {[m['folder'] for m in members]}")

@@ -55,6 +55,9 @@ def parse_settings(argv=None):
     parser.add_argument("--settings", type=Path, help="JSON file of further TrainingSettings fields")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--allow-dirty", action="store_true")
+    parser.add_argument("--checkpoints", default="",
+                        help="comma-separated practice-episode counts after which to keep the weights too "
+                             "(checkpoint_ep<N>.pt), for the early-drop check during tuning")
     args = parser.parse_args(argv)
     values = json.loads(args.settings.read_text()) if args.settings else {}
     for name in ("condition", "seed", "maze", "learner", "purpose", "budget_steps", "updates_per_env_step",
@@ -86,7 +89,10 @@ def main(argv=None):
         def write(row):
             episodes.write(json.dumps(row) + "\n")
             episodes.flush()
-        result = run_training(settings, on_episode=write)
+        checkpoints = [int(x) for x in args.checkpoints.split(",") if x.strip()]
+        result = run_training(settings, on_episode=write, checkpoint_episodes=checkpoints)
+    for n, state in result["checkpoint_states"].items():
+        torch.save(state, out / f"checkpoint_ep{n}.pt")
     torch.save(result["pretrained_state"], out / "pretrained.pt")
     torch.save(result["final_state"], out / "final.pt")
     np.savez_compressed(out / "final_buffer.npz", **result["final_buffer"])
