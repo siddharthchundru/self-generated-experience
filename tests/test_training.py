@@ -210,10 +210,10 @@ class TestAuditOf4Nov(unittest.TestCase):
         import run_training as script
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "s.json"
-            path.write_text(json.dumps({"seed": 3, "maze": "M0", "learner": "plain", "purpose": "tuning"}))
+            path.write_text(json.dumps({"seed": 3, "maze": "M0", "learner": "plain", "purpose": "capacity"}))
             settings, _ = script.parse_settings(["--condition", FRONTIER, "--settings", str(path), "--out", folder])
             self.assertEqual((settings.seed, settings.maze, settings.learner, settings.purpose),
-                             (3, "M0", "plain", "tuning"))
+                             (3, "M0", "plain", "capacity"))
             with self.assertRaises(SystemExit):
                 script.parse_settings(["--condition", FRONTIER, "--maze", "M1", "--settings", str(path),
                                        "--out", folder])

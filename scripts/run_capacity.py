@@ -14,7 +14,7 @@ results/. Writing into results/ needs a clean, committed tree.
 """
 
 import argparse
-from dataclasses import replace
+from dataclasses import asdict, replace
 import json
 import os
 from pathlib import Path
@@ -60,6 +60,7 @@ def run_all(args):
     guard_results_write(ROOT, args.out, args.allow_dirty)
     if args.quick and "results" in args.out.resolve().parts:
         raise SystemExit("--quick runs never go into results/")
+    claim_output_folder(args.out)   # audit of 26 Nov, SF6: never report an earlier call's results
     env = {**os.environ, "OMP_NUM_THREADS": "1", "MKL_NUM_THREADS": "1", "OPENBLAS_NUM_THREADS": "1"}
     processes = {}
     for maze in MAZES_CHECKED:
@@ -70,19 +71,31 @@ def run_all(args):
                        "--out", str(args.out / f"{maze}_{learner}")]
             command += ["--quick"] * args.quick + ["--allow-dirty"] * args.allow_dirty
             processes[(maze, learner)] = subprocess.Popen(command, cwd=ROOT, env=env)
-    runs = {}
+    expected = replace(CapacitySettings(seed=args.seed, updates=args.updates, learning_rate=args.learning_rate,
+                                        on_fail=args.on_fail), **(QUICK if args.quick else {}))
+    runs, problems = {}, []
     for (maze, learner), process in processes.items():
-        process.wait()
+        code = process.wait()
         file = args.out / f"{maze}_{learner}" / "capacity.json"
-        runs[f"{maze}_{learner}"] = json.loads(file.read_text()) if file.exists() else None
-    summary = {"passed": all(r is not None and r["passed"] for r in runs.values()),
+        result = json.loads(file.read_text()) if file.exists() else None
+        planned = asdict(replace(expected, maze=maze, learner=learner))
+        if code not in (0, 1) or result is None:     # 1 is a failed check; anything else is a crash
+            problems.append(f"{maze} {learner}: the run crashed (exit code {code})")
+            result = None
+        elif result["settings"] != planned or result["quick_smoke_only"] != args.quick:
+            problems.append(f"{maze} {learner}: capacity.json does not match this call's settings")
+            result = None
+        runs[f"{maze}_{learner}"] = result
+    summary = {"passed": not problems and all(r["passed"] for r in runs.values()),
+               "problems": problems,
                "runs": {k: (None if r is None else {"passed": r["passed"], "attempts": r["attempts"]})
                         for k, r in runs.items()},
                "quick_smoke_only": args.quick}
     summary["next"] = "none" if summary["passed"] else (
+        "rerun the crashed runs" if problems else
         "stop before tuning: bring the learner's capacity to Siddharth as a design question (network size)")
     write_text_atomic(args.out / "capacity_summary.json", json.dumps(summary, indent=2) + "\n")
-    print("capacity check", "passed" if summary["passed"] else "FAILED")
+    print("capacity check", "passed" if summary["passed"] else "FAILED", *problems)
     return 0 if summary["passed"] else 1
 
 

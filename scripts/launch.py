@@ -74,11 +74,12 @@ from collection import CONDITIONS, PLAIN_CONDITIONS  # noqa: E402
 import evaluate_run  # noqa: E402
 from provenance import git_state, guard_results_write  # noqa: E402
 from relearning import INITS  # noqa: E402
-from runs import check_pretrained, load_run  # noqa: E402
+from runs import check_pretrained, find_runs, load_run  # noqa: E402
 from training import TrainingSettings, settings_from_dict  # noqa: E402
 
 PER_RUN = ("condition", "seed", "learner")
 GRID_LABELS = {"learning_rate": "lr", "updates_per_env_step": "r"}
+TUNED_CONDITIONS = ("task_directed_practice", "frontier_novelty")
 PRIORITY = {"train": 0, "relearn": 1, "evaluate_pretrained": 2, "evaluate": 3}
 
 
@@ -125,6 +126,14 @@ def load_plan(path):
     plan["evaluate"] = {**evaluate, **plan.get("evaluate", {})}
     plan["relearning"] = {"enabled": False, "init": "fresh", **plan.get("relearning", {})}
     plan.setdefault("grid", {})
+    if plan["grid"] and settings["purpose"] not in ("tuning", "smoke"):   # audit of 26 Nov, MI2
+        raise SystemExit("a grid is for tuning (or smoke tests); other launches run one setting")
+    if settings["purpose"] == "tuning" and (sorted(plan["conditions"]) != sorted(TUNED_CONDITIONS)
+                                            or plan["plain_conditions"]):
+        raise SystemExit("a tuning plan runs task-directed practice and frontier novelty on the weighted learner")
+    unset = sorted(k for k, v in settings.items() if v is None)
+    if unset:
+        raise SystemExit(f"fill in the plan's settings first: {unset}")
     for name, values in plan["grid"].items():
         if name in PER_RUN or name in settings or name not in TrainingSettings.__dataclass_fields__:
             raise SystemExit(f"grid setting {name!r} must be a TrainingSettings field not set elsewhere in the plan")
@@ -151,6 +160,8 @@ def cells(plan):
         label = "_".join(f"{GRID_LABELS.get(n, n)}{v:g}" if isinstance(v, (int, float)) else f"{n}{v}"
                          for n, v in zip(names, values))
         out.append((label, dict(zip(names, values))))
+    if len({label for label, _ in out}) != len(out):   # audit of 26 Nov, MI1
+        raise SystemExit("grid values give two cells the same label (e.g. 1 and 1.0)")
     return out
 
 
@@ -403,7 +414,7 @@ def main(argv=None):
     with LaunchLock(out):
         try:
             run_jobs(out, jobs, args.workers, args.retry_incomplete)
-            report = check_pretrained(out) if (out / "runs").exists() else None
+            report = check_pretrained(out) if find_runs(out) else None   # audit of 26 Nov, SF1: cells too
         finally:  # the manifest is written however the launch ends (audit of 24 Nov, SF3)
             manifest_file = out / "launch_manifest.json"
             history = json.loads(manifest_file.read_text())["launches"] if manifest_file.exists() else []

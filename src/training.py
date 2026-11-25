@@ -148,6 +148,8 @@ class TrainingSettings:
             raise NotImplementedError("carrying the practice optimiser into adaptation is not implemented: "
                                       "the evaluation suite checks that the adapter's optimiser took exactly "
                                       "ratio x k steps")
+        if self.purpose == "tuning" and (self.maze != "M0" or self.learner != "weighted"):
+            raise ValueError("tuning runs on M0 with the weighted learner (spec sections 4 and 7)")  # 26 Nov MI2
         if self.purpose in ("pilot", "main") and self.adaptation_steps == K_PLACEHOLDER:
             raise ValueError("k = 960 is a placeholder; set k by the spec section 8 rule before the pilot")
         if self.warmup_updates < 0 or self.lr_warmup_steps < 0 or self.batch_size <= 0:

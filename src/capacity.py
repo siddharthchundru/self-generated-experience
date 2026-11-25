@@ -142,9 +142,18 @@ def evaluate(policy, s):
     if task:
         result["task_pairs"] = sum(task.values()) / len(task)
         result["task_pairs_by_row"] = task
-    result["passed"] = (result["random_pairs"] >= THRESHOLDS["random_pairs"]
-                        and result.get("task_pairs", 1.0) >= THRESHOLDS["task_pairs"])
+        # Recorded, not used for the verdict: the agreed threshold is read as the mean over the seven pairs
+        # (audit of 26 Nov, MI3: whether every pair must also reach 0.9 is open).
+        result["task_pairs_worst"] = min(task.values())
+    result["passed"] = passes(result)
     return result
+
+
+def passes(result):
+    """The agreed pass rule on one evaluation: random pairs >= 0.8 and, on M1, the mean over the
+    seven task pairs >= 0.9."""
+    return (result["random_pairs"] >= THRESHOLDS["random_pairs"]
+            and result.get("task_pairs", 1.0) >= THRESHOLDS["task_pairs"])
 
 
 def run_capacity(s, buffer=None):

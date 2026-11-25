@@ -46,7 +46,12 @@ from training import settings_from_dict
 
 WEIGHTS = {"pretrained": "pretrained.pt", "final": "final.pt"}
 #: Settings a tuning grid varies (spec section 7): runs that differ in them are different cells, not a mismatch.
-TUNING_GRID = ("learning_rate", "updates_per_env_step")
+
+
+def grid_cell(folder):
+    """The launch-grid cell a run folder belongs to (the label after "cells" in its path), or ""."""
+    parts = Path(folder).resolve().parts
+    return parts[parts.index("cells") + 1] if "cells" in parts[:-1] else ""
 
 
 def is_finished(folder):
@@ -155,8 +160,9 @@ def check_pretrained(root=None, verify_files=True, folders=None):
                  "pretrained_digest": summary["pretrained_digest"],
                  "commit": record.get("git_commit"), "dirty": record.get("working_tree_dirty"),
                  "code": json.dumps(code_hashes(record), sort_keys=True), "init": summary.get("init"),
-                 # Tuning varies these on purpose: each grid cell is its own batch.
-                 "cell": tuple(getattr(settings, n) for n in TUNING_GRID) if settings.purpose == "tuning" else ()}
+                 # A launch grid (tuning, or a smoke test) varies settings on purpose: each cell, a folder
+                 # OUT/cells/<label>/, is its own batch. Runs outside a cell are never split this way.
+                 "cell": grid_cell(folder)}
         if entry["kind"] == "training" and summary.get("warmup_key") != settings.warmup_key():
             problems.append(f"{folder}: summary's warm-up key differs from its settings")
         if summary["budget"].get("passed") is not True:
@@ -187,16 +193,21 @@ def check_pretrained(root=None, verify_files=True, folders=None):
             problems.append(f"runs with warm-up key {key} recorded {len(digests)} different pretrained "
                             f"policies: {[m['folder'] for m in members]}")
     for (seed, maze, learner, purpose, cell), members in by_seed.items():
-        label = f"seed {seed}, {maze}, {learner} learner, {purpose}" + (f", tuning cell {cell}" if cell else "")
+        label = f"seed {seed}, {maze}, {learner} learner, {purpose}" + (f", grid cell {cell}" if cell else "")
         if len({m["warmup_key"] for m in members}) != 1:
             problems.append(f"{label}: runs differ in warm-up settings, so they did not start from the same "
                             f"policy: {[m['folder'] for m in members]}")
-        # Code is compared by source hashes; the commit is only a label (audit of 24 Nov, MI1).
-        if len({m["code"] for m in members}) != 1:
-            problems.append(f"{label}: runs ran different code (source hashes differ; commits "
-                            f"{sorted({str(m['commit']) for m in members})})")
         if any(m["dirty"] for m in members):
             warnings.append(f"{label}: at least one run was made from a dirty working tree (exploratory)")
+    # Code is compared by source hashes over each purpose's whole batch, across tuning cells too (audit of
+    # 26 Nov, SF1); the commit is only a label (audit of 24 Nov, MI1).
+    by_code = defaultdict(list)
+    for r in training:
+        by_code[(r["seed"], r["maze"], r["learner"], r["purpose"])].append(r)
+    for (seed, maze, learner, purpose), members in by_code.items():
+        if len({m["code"] for m in members}) != 1:
+            problems.append(f"seed {seed}, {maze}, {learner} learner, {purpose}: runs ran different code "
+                            f"(source hashes differ; commits {sorted({str(m['commit']) for m in members})})")
     for (seed, maze, learner), members in by_seed_any_purpose.items():
         if len({m["purpose"] for m in members}) > 1 and len({m["warmup_key"] for m in members}) > 1:
             warnings.append(f"seed {seed}, {maze}, {learner} learner: runs of different purposes "
