@@ -17,12 +17,17 @@ The plan (JSON):
                      "task_directed_practice", "frontier_novelty"],
       "plain_conditions": ["task_directed_practice", "frontier_novelty"],
       "evaluate": {"final": true, "pretrained": true, "skip_adaptation": false, "quick": false},
-      "relearning": {"enabled": false, "init": "fresh"}
+      "relearning": {"enabled": false, "init": "fresh"},
+      "grid": {"learning_rate": [0.0003, 0.001], "updates_per_env_step": [0.5, 1, 2]},
+      "checkpoints": [10, 50]
     }
 "out", "seeds" and settings["purpose"] are required. Defaults: every condition, no plain arm,
 final and pretrained policies evaluated with adaptation, no re-learning.
 "settings" may not set condition, seed or learner: the launcher sets those
-per run.
+per run. "grid" (tuning) runs every combination of its values, each cell under
+OUT/cells/<cell>/ with its own pretrained policy. "checkpoints" keeps each
+training run's weights after those practice-episode counts and evaluates them
+for competence (no adaptation runs): the early-drop check of spec v0.12.
 
 Jobs and their order:
 - train: one per seed, condition and learner -> OUT/runs/<learner>/<condition>/seed<N>/
@@ -70,9 +75,10 @@ import evaluate_run  # noqa: E402
 from provenance import git_state, guard_results_write  # noqa: E402
 from relearning import INITS  # noqa: E402
 from runs import check_pretrained, load_run  # noqa: E402
-from training import settings_from_dict  # noqa: E402
+from training import TrainingSettings, settings_from_dict  # noqa: E402
 
 PER_RUN = ("condition", "seed", "learner")
+GRID_LABELS = {"learning_rate": "lr", "updates_per_env_step": "r"}
 PRIORITY = {"train": 0, "relearn": 1, "evaluate_pretrained": 2, "evaluate": 3}
 
 
@@ -94,7 +100,7 @@ class Job:
 def load_plan(path):
     plan = json.loads(Path(path).read_text())
     unknown = set(plan) - {"out", "settings", "seeds", "conditions", "plain_conditions", "evaluate",
-                           "relearning", "note"}
+                           "relearning", "grid", "checkpoints", "note"}
     if unknown:
         raise SystemExit(f"unknown plan keys: {sorted(unknown)}")
     if "out" not in plan or not plan.get("seeds"):
@@ -118,9 +124,34 @@ def load_plan(path):
     evaluate = {"final": True, "pretrained": True, "skip_adaptation": False, "quick": False}
     plan["evaluate"] = {**evaluate, **plan.get("evaluate", {})}
     plan["relearning"] = {"enabled": False, "init": "fresh", **plan.get("relearning", {})}
+    plan.setdefault("grid", {})
+    for name, values in plan["grid"].items():
+        if name in PER_RUN or name in settings or name not in TrainingSettings.__dataclass_fields__:
+            raise SystemExit(f"grid setting {name!r} must be a TrainingSettings field not set elsewhere in the plan")
+        if not isinstance(values, list) or not values or len(set(map(str, values))) != len(values):
+            raise SystemExit(f"grid setting {name!r} needs a list of distinct values")
+    plan["checkpoints"] = sorted(set(int(n) for n in plan.get("checkpoints", [])))
+    if any(n < 1 for n in plan["checkpoints"]):
+        raise SystemExit("checkpoints are practice-episode counts of at least 1")
     if plan["relearning"]["init"] not in INITS:
         raise SystemExit(f"relearning init must be one of {INITS}")
     return plan
+
+
+def cells(plan):
+    """[(label, settings overrides)]: one cell per combination of the grid's values,
+    or one unlabelled cell without a grid."""
+    import itertools
+    grid = plan["grid"]
+    if not grid:
+        return [("", {})]
+    names = sorted(grid)
+    out = []
+    for values in itertools.product(*(grid[n] for n in names)):
+        label = "_".join(f"{GRID_LABELS.get(n, n)}{v:g}" if isinstance(v, (int, float)) else f"{n}{v}"
+                         for n, v in zip(names, values))
+        out.append((label, dict(zip(names, values))))
+    return out
 
 
 def build_jobs(plan, allow_dirty=False):
@@ -130,61 +161,80 @@ def build_jobs(plan, allow_dirty=False):
     dirty = ["--allow-dirty"] if allow_dirty else []
     ev = plan["evaluate"]
     eval_flags = (["--skip-adaptation"] if ev["skip_adaptation"] else []) + (["--quick"] if ev["quick"] else [])
+    quick = ["--quick"] if ev["quick"] else []
+    checkpoints = plan["checkpoints"]
     jobs = []
     arms = [("weighted", c) for c in plan["conditions"]] + [("plain", c) for c in plan["plain_conditions"]]
-    for seed in plan["seeds"]:
-        group = {}
-        for learner, condition in arms:
-            values = {**plan["settings"], "condition": condition, "seed": seed, "learner": learner}
-            settings = settings_from_dict(values)  # raises on any refused setting, before anything runs
-            planned_settings = asdict(settings)
-            config, adapter = evaluate_run.build(settings, ev["quick"], ev["skip_adaptation"])  # SF4
-            eval_expect = {"config": asdict(config), "quick_smoke_only": ev["quick"],
-                           "adaptation_run": adapter is not None}
-            name = f"{learner}/{condition}/seed{seed}"
-            folder = out / "runs" / learner / condition / f"seed{seed}"
-            settings_file = out / "job_settings" / f"{learner}_{condition}_seed{seed}.json"
-            train = Job(f"train {name}", "train",
-                        [py, str(ROOT / "scripts/run_training.py"), "--condition", condition,
-                         "--settings", str(settings_file), "--out", str(folder)] + dirty,
-                        folder / "summary.json", folder, expect={"settings": planned_settings})
-            train.settings_file, train.settings_values = settings_file, values
-            jobs.append(train)
-            group.setdefault(learner, []).append(folder)
-            if ev["final"]:
-                jobs.append(Job(f"evaluate {name}", "evaluate",
-                                [py, str(ROOT / "scripts/evaluate_run.py"), "--run", str(folder)]
-                                + eval_flags + dirty,
-                                folder / "evaluation_final.json", deps=[train.name],
-                                expect={**eval_expect, "which": "final"}))
-            if plan["relearning"]["enabled"] and learner == "weighted":
-                re_folder = out / "relearning" / condition / f"seed{seed}"
-                relearn = Job(f"relearn {name}", "relearn",
-                              [py, str(ROOT / "scripts/run_relearning.py"), "--run", str(folder),
-                               "--out", str(re_folder), "--init", plan["relearning"]["init"]] + dirty,
-                              re_folder / "summary.json", re_folder, deps=[train.name],
-                              expect={"settings": planned_settings, "init": plan["relearning"]["init"]})
-                jobs.append(relearn)
+    for label, overrides in cells(plan):
+        base = out / "cells" / label if label else out
+        prefix = f"{label}/" if label else ""
+        for seed in plan["seeds"]:
+            group = {}
+            for learner, condition in arms:
+                values = {**plan["settings"], **overrides, "condition": condition, "seed": seed, "learner": learner}
+                settings = settings_from_dict(values)  # raises on any refused setting, before anything runs
+                if checkpoints and max(checkpoints) > settings.practice_episodes:
+                    raise SystemExit("a checkpoint lies beyond the run's practice episodes")
+                planned_settings = asdict(settings)
+                config, adapter = evaluate_run.build(settings, ev["quick"], ev["skip_adaptation"])  # SF4
+                eval_expect = {"config": asdict(config), "quick_smoke_only": ev["quick"],
+                               "adaptation_run": adapter is not None}
+                check_config, _ = evaluate_run.build(settings, ev["quick"], True)
+                name = f"{prefix}{learner}/{condition}/seed{seed}"
+                folder = base / "runs" / learner / condition / f"seed{seed}"
+                settings_file = out / "job_settings" / (name.replace("/", "_") + ".json")
+                train = Job(f"train {name}", "train",
+                            [py, str(ROOT / "scripts/run_training.py"), "--condition", condition,
+                             "--settings", str(settings_file), "--out", str(folder)]
+                            + (["--checkpoints", ",".join(map(str, checkpoints))] if checkpoints else []) + dirty,
+                            folder / "summary.json", folder,
+                            expect={"settings": planned_settings, "checkpoints": checkpoints})
+                train.settings_file, train.settings_values = settings_file, values
+                jobs.append(train)
+                group.setdefault(learner, []).append(folder)
                 if ev["final"]:
-                    jobs.append(Job(f"evaluate relearn {name}", "evaluate",
-                                    [py, str(ROOT / "scripts/evaluate_run.py"), "--run", str(re_folder)]
+                    jobs.append(Job(f"evaluate {name}", "evaluate",
+                                    [py, str(ROOT / "scripts/evaluate_run.py"), "--run", str(folder)]
                                     + eval_flags + dirty,
-                                    re_folder / "evaluation_final.json", deps=[relearn.name],
+                                    folder / "evaluation_final.json", deps=[train.name],
                                     expect={**eval_expect, "which": "final"}))
-        if ev["pretrained"]:
-            for learner, folders in group.items():
-                pre_settings = settings_from_dict({**plan["settings"], "condition": Path(folders[0]).parent.name,
-                                                   "seed": seed, "learner": learner})
-                pre_config, pre_adapter = evaluate_run.build(pre_settings, ev["quick"], ev["skip_adaptation"])
-                target = out / "pretrained" / learner / f"seed{seed}.json"
-                jobs.append(Job(f"evaluate pretrained {learner}/seed{seed}", "evaluate_pretrained",
-                                [py, str(ROOT / "scripts/evaluate_run.py"), "--run", str(folders[0]),
-                                 "--which", "pretrained", "--out", str(target)] + eval_flags + dirty,
-                                target, deps=[f"train {learner}/{Path(f).parent.name}/seed{seed}"
-                                              for f in folders],
-                                group=folders,
-                                expect={"config": asdict(pre_config), "quick_smoke_only": ev["quick"],
-                                        "adaptation_run": pre_adapter is not None, "which": "pretrained"}))
+                for n in checkpoints:  # the early-drop check needs competence only: no adaptation runs
+                    which = f"checkpoint_ep{n}"
+                    jobs.append(Job(f"evaluate {which} {name}", "evaluate",
+                                    [py, str(ROOT / "scripts/evaluate_run.py"), "--run", str(folder),
+                                     "--which", which, "--skip-adaptation"] + quick + dirty,
+                                    folder / f"evaluation_{which}.json", deps=[train.name],
+                                    expect={"config": asdict(check_config), "quick_smoke_only": ev["quick"],
+                                            "adaptation_run": False, "which": which}))
+                if plan["relearning"]["enabled"] and learner == "weighted":
+                    re_folder = base / "relearning" / condition / f"seed{seed}"
+                    relearn = Job(f"relearn {name}", "relearn",
+                                  [py, str(ROOT / "scripts/run_relearning.py"), "--run", str(folder),
+                                   "--out", str(re_folder), "--init", plan["relearning"]["init"]] + dirty,
+                                  re_folder / "summary.json", re_folder, deps=[train.name],
+                                  expect={"settings": planned_settings, "init": plan["relearning"]["init"]})
+                    jobs.append(relearn)
+                    if ev["final"]:
+                        jobs.append(Job(f"evaluate relearn {name}", "evaluate",
+                                        [py, str(ROOT / "scripts/evaluate_run.py"), "--run", str(re_folder)]
+                                        + eval_flags + dirty,
+                                        re_folder / "evaluation_final.json", deps=[relearn.name],
+                                        expect={**eval_expect, "which": "final"}))
+            if ev["pretrained"]:
+                for learner, folders in group.items():
+                    pre_settings = settings_from_dict({**plan["settings"], **overrides,
+                                                       "condition": Path(folders[0]).parent.name,
+                                                       "seed": seed, "learner": learner})
+                    pre_config, pre_adapter = evaluate_run.build(pre_settings, ev["quick"], ev["skip_adaptation"])
+                    target = base / "pretrained" / learner / f"seed{seed}.json"
+                    jobs.append(Job(f"evaluate pretrained {prefix}{learner}/seed{seed}", "evaluate_pretrained",
+                                    [py, str(ROOT / "scripts/evaluate_run.py"), "--run", str(folders[0]),
+                                     "--which", "pretrained", "--out", str(target)] + eval_flags + dirty,
+                                    target, deps=[f"train {prefix}{learner}/{Path(f).parent.name}/seed{seed}"
+                                                  for f in folders],
+                                    group=folders,
+                                    expect={"config": asdict(pre_config), "quick_smoke_only": ev["quick"],
+                                            "adaptation_run": pre_adapter is not None, "which": "pretrained"}))
     return out, jobs
 
 
@@ -199,6 +249,10 @@ def mismatch(job):
             settings, _, _ = load_run(job.folder)  # also checks settings.json against summary.json
             if asdict(settings) != job.expect["settings"]:
                 return f"{job.folder} was run with other settings than this plan's"
+            if job.kind == "train":
+                kept = sorted(int(n) for n in json.loads(job.done.read_text()).get("checkpoint_digests", {}))
+                if kept != job.expect["checkpoints"]:
+                    return f"{job.folder} kept checkpoints {kept}, not the plan's {job.expect['checkpoints']}"
             if job.kind == "relearn":
                 init = json.loads((job.folder / "relearning.json").read_text())["init"]
                 if init != job.expect["init"]:
